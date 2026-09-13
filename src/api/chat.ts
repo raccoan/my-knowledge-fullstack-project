@@ -8,8 +8,10 @@ export interface ChatParams {
 
 export interface ChatSource {
   document_id: number
+  filename:string
   content: string
   distance: number
+
 }
 
 

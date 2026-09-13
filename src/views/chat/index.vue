@@ -842,10 +842,9 @@ const clearChat = () => {
                             <a-tag
                               color="blue"
                             >
-                              Document #{{
-                                source.document_id
-                              }}
+                              {{ source.filename }}
                             </a-tag>
+                            <span class="source-score">相关度{{ ((1 - source.distance) * 100).toFixed(1) }}%</span>
 
                             <div
                               class="source-content"
@@ -1228,6 +1227,11 @@ const clearChat = () => {
 
 .source-card {
   background: #f7f8fa;
+}
+
+.source-score{
+  color:#999;
+  font-size:12px;
 }
 
 .source-content {
