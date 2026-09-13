@@ -1,11 +1,28 @@
 import request from './request'
 
+
 export interface ChatParams {
   question: string
 }
 
+
+export interface ChatSource {
+  document_id: number
+  content: string
+  distance: number
+}
+
+
+interface StreamEvent {
+  type: 'sources' | 'content' | 'done'
+  sources?: ChatSource[]
+  content?: string
+}
+
+
 export async function streamChat(
   params: ChatParams,
+  onSources: (sources: ChatSource[]) => void,
   onMessage: (content: string) => void,
   onDone: () => void,
   signal?: AbortSignal,
@@ -15,6 +32,7 @@ export async function streamChat(
   if (!token) {
     throw new Error('未登录')
   }
+
 
   const response = await fetch(
     `${request.defaults.baseURL}/chat/stream`,
@@ -28,81 +46,129 @@ export async function streamChat(
 
       body: JSON.stringify(params),
 
-      // 用于停止生成
       signal,
     },
   )
 
+
   if (!response.ok) {
-    throw new Error(`请求失败：${response.status}`)
+    throw new Error(
+      `请求失败：${response.status}`
+    )
   }
+
 
   if (!response.body) {
-    throw new Error('浏览器不支持流式响应')
+    throw new Error(
+      '浏览器不支持流式响应'
+    )
   }
 
-  const reader =
-    response.body.getReader()
 
-  const decoder =
-    new TextDecoder('utf-8')
+  const reader = response.body.getReader()
+
+  const decoder = new TextDecoder(
+    'utf-8'
+  )
 
   let buffer = ''
 
+
   try {
+
     while (true) {
+
       const {
         value,
         done,
       } = await reader.read()
 
+
       if (done) {
         break
       }
+
 
       buffer += decoder.decode(
         value,
         {
           stream: true,
-        },
+        }
       )
+
 
       const events =
         buffer.split('\n\n')
 
+
       buffer =
         events.pop() || ''
 
+
       for (const event of events) {
+
         const lines =
           event.split('\n')
 
+
         for (const line of lines) {
+
           if (!line.startsWith('data:')) {
             continue
           }
 
-          let content =
+
+          let data =
             line.slice(5)
 
-          if (content.startsWith(' ')) {
-            content =
-              content.slice(1)
+
+          if (data.startsWith(' ')) {
+            data = data.slice(1)
           }
 
-          if (content === '[DONE]') {
+
+          if (!data) {
+            continue
+          }
+
+
+          const eventData =
+            JSON.parse(data) as StreamEvent
+
+
+          if (
+            eventData.type === 'sources'
+          ) {
+
+            onSources(
+              eventData.sources || []
+            )
+
+          } else if (
+            eventData.type === 'content'
+          ) {
+
+            onMessage(
+              eventData.content || ''
+            )
+
+          } else if (
+            eventData.type === 'done'
+          ) {
+
             onDone()
+
             return
           }
-
-          onMessage(content)
         }
       }
     }
 
+
     onDone()
+
   } catch (error) {
-    // 用户主动停止
+
     if (
       error instanceof DOMException &&
       error.name === 'AbortError'
@@ -111,7 +177,10 @@ export async function streamChat(
     }
 
     throw error
+
   } finally {
+
     reader.releaseLock()
+
   }
 }
