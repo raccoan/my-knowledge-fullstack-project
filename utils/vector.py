@@ -30,7 +30,7 @@ def add_vector(
 def search_vector(
         query_embedding,
         user_id,
-        n_results = 2,
+        n_results = 3,
 
 ):
     result = collection.query(
