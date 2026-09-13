@@ -1,15 +1,21 @@
+from sqlalchemy.orm import Session
+
 from utils.embedding import get_embedding
 from utils.vector import search_vector
 from utils.llm import chat_with_llm
 from utils.llm import chat_with_llm_stream
 
+from models.document import Document
+from models.file import File as FileModel
+
 
 def retrieve_documents(
         question: str,
-        user_id: int
+        user_id: int,
+        db: Session
 ):
     """
-    根据用户问题，从当前用户自己的知识库中检索相关内容。
+    根据问题，从当前用户自己的知识库中检索相关知识。
     """
 
     query_embedding = get_embedding(question)
@@ -20,9 +26,20 @@ def retrieve_documents(
         n_results=3
     )
 
-    documents = result.get("documents", [[]])[0]
-    metadatas = result.get("metadatas", [[]])[0]
-    distances = result.get("distances", [[]])[0]
+    documents = result.get(
+        "documents",
+        [[]]
+    )[0]
+
+    metadatas = result.get(
+        "metadatas",
+        [[]]
+    )[0]
+
+    distances = result.get(
+        "distances",
+        [[]]
+    )[0]
 
     sources = []
 
@@ -30,8 +47,32 @@ def retrieve_documents(
 
         metadata = metadatas[index]
 
+        document_id = metadata[
+            "document_id"
+        ]
+
+        document = db.query(
+            Document
+        ).filter(
+            Document.id == document_id
+        ).first()
+
+        filename = "未知文件"
+
+        if document:
+
+            file = db.query(
+                FileModel
+            ).filter(
+                FileModel.id == document.file_id
+            ).first()
+
+            if file:
+                filename = file.filename
+
         sources.append({
-            "document_id": metadata["document_id"],
+            "document_id": document_id,
+            "filename": filename,
             "content": content,
             "distance": distances[index]
         })
@@ -74,11 +115,13 @@ def build_prompt(
 
 def rag_answer(
         question: str,
-        user_id: int
+        user_id: int,
+        db: Session
 ):
     sources = retrieve_documents(
         question,
-        user_id
+        user_id,
+        db
     )
 
     prompt = build_prompt(
@@ -86,7 +129,9 @@ def rag_answer(
         sources
     )
 
-    answer = chat_with_llm(prompt)
+    answer = chat_with_llm(
+        prompt
+    )
 
     return {
         "answer": answer,
@@ -96,11 +141,13 @@ def rag_answer(
 
 def rag_answer_stream(
         question: str,
-        user_id: int
+        user_id: int,
+        db: Session
 ):
     sources = retrieve_documents(
         question,
-        user_id
+        user_id,
+        db
     )
 
     prompt = build_prompt(
@@ -108,5 +155,7 @@ def rag_answer_stream(
         sources
     )
 
-    for content in chat_with_llm_stream(prompt):
+    for content in chat_with_llm_stream(
+        prompt
+    ):
         yield content
