@@ -1,15 +1,18 @@
-from aiohttp.web_response import StreamResponse
+
 from fastapi.params import Depends
 from sqlalchemy.orm import  Session
 
 from database import get_db
+from models.conversation import Conversation
+from models.message import Message
 from schemas.chat import ChatRequest
 from utils.rag import rag_answer, build_prompt,retrieve_documents
 from utils.llm import chat_with_llm_stream
-from fastapi import APIRouter
+from fastapi import APIRouter,HTTPException
 from fastapi.responses import StreamingResponse
 from models.user import  User
 from utils.auth import get_current_user
+from sqlalchemy.sql import  func
 
 import json
 
@@ -24,13 +27,39 @@ def chat(request:ChatRequest,current_user:User=Depends(get_current_user)):
 
 @router.post("/chat/stream")
 def chat_stream(
-        request: ChatRequest,
-        db: Session = Depends(get_db),
-        current_user: User = Depends(
-            get_current_user
-        )
+    request: ChatRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        get_current_user
+    )
 ):
     user_id = current_user["id"]
+
+    conversation = (
+        db.query(Conversation)
+        .filter(
+            Conversation.id ==
+            request.conversation_id,
+            Conversation.user_id ==
+            user_id
+        )
+        .first()
+    )
+
+    if not conversation:
+        raise HTTPException(
+            status_code=404,
+            detail="会话不存在"
+        )
+
+    user_message = Message(
+        conversation_id=conversation.id,
+        role="user",
+        content=request.question
+    )
+
+    db.add(user_message)
+    db.commit()
 
     sources = retrieve_documents(
         request.question,
@@ -45,9 +74,6 @@ def chat_stream(
 
     def event_generator():
 
-        # =========================
-        # 1. 来源
-        # =========================
         yield (
             "data: "
             + json.dumps(
@@ -60,12 +86,12 @@ def chat_stream(
             + "\n\n"
         )
 
-        # =========================
-        # 2. AI 内容
-        # =========================
+        answer_parts = []
+
         for content in chat_with_llm_stream(
             prompt
         ):
+            answer_parts.append(content)
 
             yield (
                 "data: "
@@ -79,9 +105,20 @@ def chat_stream(
                 + "\n\n"
             )
 
-        # =========================
-        # 3. 完成
-        # =========================
+        answer = "".join(answer_parts)
+
+        assistant_message = Message(
+            conversation_id=conversation.id,
+            role="assistant",
+            content=answer
+        )
+
+        db.add(assistant_message)
+
+        conversation.updated_at = func.now()
+
+        db.commit()
+
         yield (
             "data: "
             + json.dumps(

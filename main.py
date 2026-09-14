@@ -4,6 +4,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from routers import users
 from routers import files
 from routers import chat
+from routers import conversations
+
+from models.user import User
+from models.file import File
+from models.document import Document
+from models.chunk import Chunk
+from models.conversation import Conversation
+from models.message import Message
 
 app = FastAPI()
 
@@ -22,3 +30,4 @@ app.add_middleware(
 app.include_router(users.router)
 app.include_router(files.router)
 app.include_router(chat.router)
+app.include_router(conversations.router)
