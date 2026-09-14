@@ -3,6 +3,7 @@ import request from './request'
 
 export interface ChatParams {
   question: string
+  conversation_id:number
 }
 
 

@@ -1,9 +1,11 @@
-```vue
+
 <script setup lang="ts">
 import {
   computed,
   nextTick,
   ref,
+  onMounted,
+
 } from 'vue'
 
 import { useRouter } from 'vue-router'
@@ -34,7 +36,8 @@ import type {
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
-
+import type { Conversation,ChatMessage } from '@/api/conversations'
+import {createConversation,getConversationMessages,getConversations,deleteConversation} from '@/api/conversations'
 /**
  * =========================
  * Markdown
@@ -97,6 +100,9 @@ interface MessageItem {
 const router = useRouter()
 const messages = ref<MessageItem[]>([])
 
+const conversations = ref<Conversation[]>([])
+
+const currentConversationId = ref<number | null>(null)
 
 
 const inputValue = ref('')
@@ -109,7 +115,14 @@ const currentAssistantId =
 const abortController =
   ref<AbortController | null>(null)
 
-
+// 页面加载的时候
+const loadConversations = async () => {
+  try{
+    conversations.value = await getConversations()
+  }catch (error) {
+    console.log("获取会话失败:",error)
+  }
+}
 
 /**
  * 真正的滚动容器
@@ -274,10 +287,20 @@ const sendMessage = async (
   abortController.value =
     controller
 
+  
   try {
+
+    if(currentConversationId.value===null){
+      const conversation = await createConversation()
+
+      currentConversationId.value = conversation.id
+      conversations.value.unshift(conversation)
+    }
+
     await streamChat(
       {
         question: text,
+        conversation_id:currentConversationId.value,
       },
 
       /**
@@ -552,6 +575,10 @@ const clearChat = () => {
     '已清空对话',
   )
 }
+
+onMounted(()=>{
+  loadConversations()
+})
 </script>
 
 <template>
