@@ -23,7 +23,7 @@ class Message(Base):
         nullable=False,
     )
 
-    context = Column(
+    content = Column(
         Text,
         nullable=False,
     )

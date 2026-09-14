@@ -39,14 +39,27 @@ def create_conversation(
 # 获取当前用户所有对话接口
 @router.get("/conversations")
 def get_conversations(
-        db:Session=Depends(get_db),
-        current_user=Depends(get_current_user)
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
 ):
-    user_id=current_user["id"]
-    conversations = (db.query(Conversation).filter(
-        Conversation.user_id==user_id).order_by(Conversation.updated_at.desc()).all()
+    user_id = current_user["id"]
+
+    conversations = (
+        db.query(Conversation)
+        .filter(Conversation.user_id == user_id)
+        .order_by(Conversation.updated_at.desc())
+        .all()
     )
-    return conversations
+
+    return [
+        {
+            "id": item.id,
+            "title": item.title,
+            "created_at": item.created_at,
+            "updated_at": item.updated_at,
+        }
+        for item in conversations
+    ]
 
 # 获取单个会话接口
 @router.get("/conversations/{conversation_id}")
@@ -71,27 +84,44 @@ def get_conversation(
 # 获取某单独会话下的所有消息接口
 @router.get("/conversations/{conversation_id}/messages")
 def get_messages(
-        conversation_id:int,
-        db:Session=Depends(get_db),
-        current_user=Depends(get_current_user),
+    conversation_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
 ):
-    user_id=current_user["id"]
-    conversation = (db.query(Conversation).filter(
-        Conversation.id==conversation_id,
-        Conversation.user_id==user_id,
-        ).first()
+    user_id = current_user["id"]
+
+    conversation = (
+        db.query(Conversation)
+        .filter(
+            Conversation.id == conversation_id,
+            Conversation.user_id == user_id
+        )
+        .first()
     )
+
     if not conversation:
         raise HTTPException(
             status_code=404,
             detail="会话不存在"
         )
 
-    messages = db.query(Message).filter(
-        Message.conversation_id==conversation_id,
-    ).order_by(Message.created_at.asc())
+    messages = (
+        db.query(Message)
+        .filter(Message.conversation_id == conversation_id)
+        .order_by(Message.created_at.asc())
+        .all()
+    )
 
-    return messages
+    return [
+        {
+            "id": item.id,
+            "conversation_id": item.conversation_id,
+            "role": item.role,
+            "content": item.content,
+            "created_at": item.created_at,
+        }
+        for item in messages
+    ]
 
 # 删除某个会话接口
 @router.delete("/conversations/{conversation_id}")
