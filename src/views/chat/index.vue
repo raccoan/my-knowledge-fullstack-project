@@ -29,6 +29,9 @@ import {
   streamChat,
 } from '@/api/chat'
 
+
+import {createConversation,getConversationMessages,getConversations,deleteConversation} from '@/api/conversations'
+
 import type {
   ChatSource,
 } from '@/api/chat'
@@ -37,7 +40,6 @@ import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
 import type { Conversation,ChatMessage } from '@/api/conversations'
-import {createConversation,getConversationMessages,getConversations,deleteConversation} from '@/api/conversations'
 /**
  * =========================
  * Markdown
@@ -115,14 +117,6 @@ const currentAssistantId =
 const abortController =
   ref<AbortController | null>(null)
 
-// 页面加载的时候
-const loadConversations = async () => {
-  try{
-    conversations.value = await getConversations()
-  }catch (error) {
-    console.log("获取会话失败:",error)
-  }
-}
 
 /**
  * 真正的滚动容器
@@ -229,6 +223,20 @@ const sendMessage = async (
   if (loading.value) {
     return
   }
+
+  if (
+  currentConversationId.value === null
+) {
+  const conversation =
+    await createConversation()
+
+  conversations.value.unshift(
+    conversation,
+  )
+
+  currentConversationId.value =
+    conversation.id
+}
 
   /**
    * =========================
@@ -556,6 +564,21 @@ const handleInputKeydown = (
   }
 }
 
+
+/**
+ * =========================
+ * 获取历史会话
+ * =========================
+ */
+
+const loadConversations = async () => {
+  try{
+    conversations.value = await getConversations()
+  }catch (error) {
+    console.log("获取会话失败:",error)
+  }
+}
+
 /**
  * =========================
  * 清空聊天
@@ -575,6 +598,89 @@ const clearChat = () => {
     '已清空对话',
   )
 }
+
+
+
+/**
+ * =========================
+ * 新建对话
+ * =========================
+ */
+const createNewConversation = async () => {
+    if (loading.value) {
+      stopGeneration()
+    }
+
+    try {
+      const conversation =
+        await createConversation()
+
+      conversations.value.unshift(
+        conversation,
+      )
+
+      currentConversationId.value =
+        conversation.id
+
+      messages.value = []
+
+      showBackToBottom.value =
+        false
+
+      message.success(
+        '已创建新对话',
+      )
+    } catch (error) {
+      console.error(
+        '创建会话失败:',
+        error,
+      )
+
+      message.error(
+        '创建对话失败',
+      )
+    }
+}
+
+
+/**
+ * =========================
+ * 切换会话
+ * =========================
+ */
+ 
+const switchConversation = async (conversationId:number) => {
+  if(loading.value) stopGeneration()
+  try{
+    const conversationMessages = await getConversationMessages(
+      conversationId
+    ) 
+    currentConversationId.value = conversationId
+
+    messages.value = conversationMessages.map((item:ChatMessage)=>({
+      id:item.id,
+      role:item.role,
+      content:item.content,
+      sources:[],
+
+      }),
+    )
+    await scrollToBottom(false,)
+
+  }catch(error){
+     console.error(
+        '加载会话失败:',
+        error,
+      )
+
+      // 弹出失败提示。
+      message.error(
+        '加载会话失败',
+      )
+  }
+}
+
+
 
 onMounted(()=>{
   loadConversations()
@@ -603,10 +709,46 @@ onMounted(()=>{
           type="primary"
           block
           class="new-chat-button"
-          @click="clearChat"
+          @click="createNewConversation"
         >
           新建对话
         </a-button>
+
+        <a-divider />
+
+        <div class="sider-title">
+          历史对话
+        </div>
+
+        <a-list
+          v-if="conversations.length"
+          size="small"
+          class="conversation-list"
+          :data-source="conversations"
+        >
+          <template #renderItem="{ item }">
+            <a-list-item
+              class="conversation-item"
+              :class="{
+                'conversation-item-active':
+                  currentConversationId === item.id,
+              }"
+              @click="
+                switchConversation(item.id)
+              "
+            >
+              <div class="conversation-title">
+                {{ item.title }}
+              </div>
+            </a-list-item>
+          </template>
+        </a-list>
+
+        <a-empty
+          v-else
+          description="暂无历史对话"
+          class="conversation-empty"
+        />
 
         <a-divider />
 
@@ -1368,4 +1510,37 @@ onMounted(()=>{
     justify-content: flex-end;
   }
 }
+
+.conversation-list {
+  margin-bottom: 12px;
+}
+
+.conversation-item {
+  display: block;
+  padding: 9px 10px !important;
+  border-radius: 6px;
+  cursor: pointer;
+  border-bottom: none !important;
+}
+
+.conversation-item:hover {
+  background: #f5f5f5;
+}
+
+.conversation-item-active {
+  background: #e6f4ff;
+}
+
+.conversation-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #333;
+  font-size: 13px;
+}
+
+.conversation-empty {
+  margin: 12px 0;
+}
+
 </style>
