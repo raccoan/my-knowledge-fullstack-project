@@ -6,6 +6,8 @@ import {
   ref,
 } from 'vue'
 
+import { useRouter } from 'vue-router'
+
 import {
   message,
 } from 'ant-design-vue'
@@ -91,7 +93,11 @@ interface MessageItem {
  * 状态
  * =========================
  */
+
+const router = useRouter()
 const messages = ref<MessageItem[]>([])
+
+
 
 const inputValue = ref('')
 
@@ -102,6 +108,8 @@ const currentAssistantId =
 
 const abortController =
   ref<AbortController | null>(null)
+
+
 
 /**
  * 真正的滚动容器
@@ -583,6 +591,8 @@ const clearChat = () => {
           size="small"
           :bordered="false"
           class="knowledge-card"
+          hoverable
+          @click="router.push('/knowledge')"
         >
           <a-space>
             <FileTextOutlined />
@@ -1022,19 +1032,22 @@ const clearChat = () => {
   padding: 0 24px;
   background: #fff;
   border-bottom: 1px solid #f0f0f0;
+
+  line-height: normal;
 }
 
 .header-title {
   font-size: 16px;
   font-weight: 600;
+  line-height: 22px;
 }
 
 .header-subtitle {
   margin-top: 3px;
   color: #999;
   font-size: 12px;
+  line-height: 18px;
 }
-
 /* =========================
    内容区域
    ========================= */
