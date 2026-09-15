@@ -14,6 +14,7 @@ from database import get_db
 from models.resume import Resume
 from utils.auth import get_current_user
 from utils.pdf import extract_pdf_text
+from utils.llm import parse_resume_with_llm
 
 
 router = APIRouter()
@@ -62,13 +63,14 @@ def upload_resume(
     text = extract_pdf_text(
         file_path
     )
-
+    structured_data = parse_resume_with_llm(text)
     # 6. 保存数据库
     resume = Resume(
         user_id=user_id,
         filename=file.filename,
         file_path=file_path,
-        content=text
+        content=text,
+        structured_data=structured_data
     )
 
     db.add(resume)
@@ -84,6 +86,7 @@ def upload_resume(
             "id": resume.id,
             "filename": resume.filename,
             "file_path": resume.file_path,
+            "structured_data": resume.structured_data,
             "created_at": resume.created_at,
             "updated_at": resume.updated_at
         }
@@ -113,8 +116,9 @@ def get_resumes(
             "id": resume.id,
             "filename": resume.filename,
             "file_path": resume.file_path,
+            "structured_data":resume.structured_data,
             "created_at": resume.created_at,
-            "updated_at": resume.updated_at
+            "updated_at": resume.updated_at,
         }
         for resume in resumes
     ]

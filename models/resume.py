@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime
+from sqlalchemy import Column, Integer, String, Text, DateTime,JSON
 from sqlalchemy.sql import func
 
 from database import Base
@@ -39,4 +39,9 @@ class Resume(Base):
         DateTime,
         server_default=func.now(),
         onupdate=func.now()
+    )
+
+    structured_data = Column(
+        JSON,
+        nullable=True
     )
