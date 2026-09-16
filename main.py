@@ -6,6 +6,7 @@ from routers import files
 from routers import chat
 from routers import conversations
 from routers import  resumes
+from routers import  interviews
 
 from models.user import User
 from models.file import File
@@ -14,7 +15,8 @@ from models.chunk import Chunk
 from models.conversation import Conversation
 from models.message import Message
 from models.resume import  Resume
-
+from models.interview_message import  InterviewMessage
+from models.interview import Interview
 
 app = FastAPI()
 
@@ -35,3 +37,4 @@ app.include_router(files.router)
 app.include_router(chat.router)
 app.include_router(conversations.router)
 app.include_router(resumes.router)
+app.include_router(interviews.router)
