@@ -24,6 +24,14 @@ const router = createRouter({
         requiresAuth: true
       },
     },
+    {
+      path:'/interviews',
+      name:'Interview',
+      component:()=>import('@/views/interview/index.vue'),
+      meta:{
+        requiresAuth: true,
+      },
+    },
 
     {
       path: '/',
