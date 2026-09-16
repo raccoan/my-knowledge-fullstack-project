@@ -23,6 +23,8 @@ import {
   RobotOutlined,
   UserOutlined,
   FileTextOutlined,
+  ProfileOutlined,
+  AimOutlined,
 } from '@ant-design/icons-vue'
 
 import {
@@ -118,6 +120,8 @@ const abortController =
   ref<AbortController | null>(null)
 
 
+
+    
 /**
  * 真正的滚动容器
  *
@@ -753,13 +757,14 @@ onMounted(()=>{
         <a-divider />
 
         <div class="sider-title">
-          当前知识库
+          功能中心
         </div>
 
+        <!-- 我的知识库 -->
         <a-card
           size="small"
           :bordered="false"
-          class="knowledge-card"
+          class="feature-card knowledge-card"
           hoverable
           @click="router.push('/knowledge')"
         >
@@ -770,6 +775,52 @@ onMounted(()=>{
               我的知识库
             </span>
           </a-space>
+
+          <div class="feature-description">
+            管理你的学习资料和知识文档
+          </div>
+        </a-card>
+
+        <!-- 我的简历 -->
+        <a-card
+          size="small"
+          :bordered="false"
+          class="feature-card resume-card"
+          hoverable
+        @click="router.push('/resume')"
+        >
+          <a-space>
+            <ProfileOutlined />
+
+            <span>
+              我的简历
+            </span>
+          </a-space>
+
+          <div class="feature-description">
+            AI 解析项目、技能和实习经历
+          </div>
+        </a-card>
+
+        <!-- AI 模拟面试 -->
+        <a-card
+          size="small"
+          :bordered="false"
+          class="feature-card interview-card"
+          hoverable
+          @click="router.push('/interview')"
+        >
+          <a-space>
+            <AimOutlined />
+
+            <span>
+              AI 模拟面试
+            </span>
+          </a-space>
+
+          <div class="feature-description">
+            根据你的真实简历进行针对性面试
+          </div>
         </a-card>
 
         <div class="sider-tip">
@@ -1178,8 +1229,36 @@ onMounted(()=>{
 }
 
 .knowledge-card {
-  cursor: pointer;
   background: #f5f5f5;
+}
+
+.resume-card {
+  background: #f5f5f5;
+}
+
+.interview-card {
+  background: #f5f5f5;
+}
+
+.feature-card {
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-1px);
+}
+
+.feature-card :deep(.ant-card-body) {
+  padding: 12px;
+}
+
+.feature-description {
+  margin-top: 6px;
+  color: #999;
+  font-size: 11px;
+  line-height: 1.5;
 }
 
 .sider-tip {

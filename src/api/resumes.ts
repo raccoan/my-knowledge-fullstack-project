@@ -58,10 +58,9 @@ export async function uploadResume(file: File) {
   const response = await request.post<{
     message: string
     resume: Resume
-  }>(
-    '/resumes/upload',
-    formData,
-  )
+  }>('/resumes/upload', formData, {
+    timeout: 120000,
+  })
 
   return response.data
 }

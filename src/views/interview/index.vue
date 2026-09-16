@@ -7,6 +7,8 @@ import {
   createInterview,
   answerInterview,
   getInterview,
+  getInterviewReport,
+  type InterviewReport,
   type InterviewMessage,
 } from '@/api/interviews'
 
@@ -30,6 +32,7 @@ const resumeId = Number(
   route.query.resumeId
 )
 
+const report = ref<InterviewReport | null>(null)
 
 const startInterview = async () => {
   if (!resumeId) {
@@ -104,6 +107,8 @@ const submitAnswer = async () => {
     if (result.finished) {
       finished.value = true
       question.value = ''
+
+      await loadReport()
     } else {
       question.value = result.next_question
 
@@ -149,6 +154,25 @@ const loadInterview = async () => {
   } catch (error) {
     console.error(error)
     message.error('加载面试失败')
+  }
+}
+
+
+const loadReport = async () => {
+  if (!interviewId.value) {
+    return
+  }
+
+  try {
+    const result =
+      await getInterviewReport(
+        interviewId.value
+      )
+
+    report.value = result.report
+  } catch (error) {
+    console.error(error)
+    message.error('获取面试报告失败')
   }
 }
 
@@ -256,12 +280,121 @@ onMounted(async () => {
           </div>
         </div>
 
-        <a-result
-          v-else
-          status="success"
-          title="面试完成"
-          :sub-title="`本轮累计得分：${score ?? 0}`"
-        />
+        <div
+          v-else-if="report"
+          class="report-panel"
+        >
+          <div class="report-header">
+            <div>
+              <div class="report-title">
+                AI 面试评估报告
+              </div>
+
+              <div class="report-subtitle">
+                基于你的简历、面试表现和知识库生成
+              </div>
+            </div>
+
+            <div class="overall-score">
+              {{ report.overall_score }}
+              <span>分</span>
+            </div>
+          </div>
+
+          <a-row :gutter="16">
+            <a-col :span="6">
+              <a-card>
+                <a-statistic
+                  title="项目能力"
+                  :value="report.project_ability"
+                />
+              </a-card>
+            </a-col>
+
+            <a-col :span="6">
+              <a-card>
+                <a-statistic
+                  title="技术能力"
+                  :value="report.technical_ability"
+                />
+              </a-card>
+            </a-col>
+
+            <a-col :span="6">
+              <a-card>
+                <a-statistic
+                  title="实践能力"
+                  :value="report.practical_ability"
+                />
+              </a-card>
+            </a-col>
+
+            <a-col :span="6">
+              <a-card>
+                <a-statistic
+                  title="表达能力"
+                  :value="report.communication_ability"
+                />
+              </a-card>
+            </a-col>
+          </a-row>
+
+          <a-card
+            title="表现较好的地方"
+            class="report-card"
+          >
+            <ul>
+              <li
+                v-for="item in report.strengths"
+                :key="item"
+              >
+                {{ item }}
+              </li>
+            </ul>
+          </a-card>
+
+          <a-card
+            title="需要提升的地方"
+            class="report-card"
+          >
+            <ul>
+              <li
+                v-for="item in report.weaknesses"
+                :key="item"
+              >
+                {{ item }}
+              </li>
+            </ul>
+          </a-card>
+
+          <a-card
+            title="知识薄弱点"
+            class="report-card"
+          >
+            <div class="tag-list">
+              <a-tag
+                v-for="item in report.knowledge_gaps"
+                :key="item"
+              >
+                {{ item }}
+              </a-tag>
+            </div>
+          </a-card>
+
+          <a-card
+            title="学习建议"
+            class="report-card"
+          >
+            <ul>
+              <li
+                v-for="item in report.suggestions"
+                :key="item"
+              >
+                {{ item }}
+              </li>
+            </ul>
+          </a-card>
+        </div>
       </div>
     </div>
   </div>
@@ -382,5 +515,53 @@ onMounted(async () => {
   align-items: center;
   color: #999;
   font-size: 12px;
+}
+
+.report-panel {
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.report-header {
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.report-title {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.report-subtitle {
+  margin-top: 6px;
+  color: #999;
+  font-size: 13px;
+}
+
+.overall-score {
+  font-size: 42px;
+  font-weight: 700;
+}
+
+.overall-score span {
+  margin-left: 4px;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.report-card {
+  margin-top: 16px;
+}
+
+.report-card ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.report-card li {
+  margin-bottom: 8px;
+  line-height: 1.6;
 }
 </style>

@@ -32,6 +32,18 @@ export interface AnswerInterviewResponse {
   finished: boolean
 }
 
+export interface InterviewReport {
+  overall_score: number
+  project_ability: number
+  technical_ability: number
+  practical_ability: number
+  communication_ability: number
+  strengths: string[]
+  weaknesses: string[]
+  knowledge_gaps: string[]
+  suggestions: string[]
+}
+
 export async function createInterview(
   resumeId: number
 ) {
@@ -39,6 +51,9 @@ export async function createInterview(
     '/interviews',
     {
       resume_id: resumeId,
+    },
+    {
+      timeout: 120000,
     },
   )
 
@@ -68,3 +83,19 @@ export async function getInterview(
 
   return response.data
 }
+
+
+export async function getInterviewReport(
+  interviewId: number,
+) {
+  const response =
+    await request.get<{
+      interview_id: number
+      report: InterviewReport
+    }>(
+      `/interviews/${interviewId}/report`,
+    )
+
+  return response.data
+}
+
