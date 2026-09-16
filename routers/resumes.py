@@ -60,10 +60,18 @@ def upload_resume(
         )
 
     # 5. 解析 PDF
-    text = extract_pdf_text(
-        file_path
-    )
+    print("开始解析 PDF")
+
+    text = extract_pdf_text(file_path)
+
+    print("PDF 解析完成")
+    print("简历文本长度:", len(text))
+
+    print("开始调用 LLM 解析简历")
+
     structured_data = parse_resume_with_llm(text)
+
+    print("LLM 简历解析完成")
     # 6. 保存数据库
     resume = Resume(
         user_id=user_id,

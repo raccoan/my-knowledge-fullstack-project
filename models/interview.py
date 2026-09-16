@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime
+from sqlalchemy import Column, Integer, String, Text, DateTime,JSON
 from sqlalchemy.sql import func
 
 from database import Base
@@ -49,4 +49,9 @@ class Interview(Base):
         DateTime,
         server_default=func.now(),
         onupdate=func.now()
+    )
+
+    report = Column(
+        JSON,
+        nullable=True
     )

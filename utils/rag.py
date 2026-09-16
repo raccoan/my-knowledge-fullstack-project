@@ -12,7 +12,8 @@ from models.file import File as FileModel
 def retrieve_documents(
         question: str,
         user_id: int,
-        db: Session
+        db: Session,
+        n_results:int = 3,
 ):
     """
     根据问题，从当前用户自己的知识库中检索相关知识。
@@ -23,7 +24,7 @@ def retrieve_documents(
     result = search_vector(
         query_embedding,
         user_id,
-        n_results=3
+        n_results=n_results
     )
 
     documents = result.get(

@@ -20,8 +20,12 @@ from schemas.interview import (
 from utils.auth import get_current_user
 from utils.llm import (
     generate_interview_question,
-    evaluate_interview_answer
+    evaluate_interview_answer,
+    evaluate_interview_answer_with_knowledge,
+    generate_interview_report
 )
+from utils.rag import retrieve_documents
+
 
 
 router = APIRouter()
@@ -144,8 +148,15 @@ def answer_interview(
 
     db.add(user_message)
 
-    result = evaluate_interview_answer(
+    knowledge_sources = retrieve_documents(
+        question,
+        user_id,
+        db
+    )
+
+    result = evaluate_interview_answer_with_knowledge(
         resume.structured_data,
+        knowledge_sources,
         question,
         request.answer
     )
@@ -172,6 +183,45 @@ def answer_interview(
     if finished:
         interview.status = "finished"
         interview.current_question = None
+
+        interview_messages = (
+            db.query(InterviewMessage)
+            .filter(
+                InterviewMessage.interview_id ==
+                interview.id
+            )
+            .order_by(
+                InterviewMessage.created_at.asc()
+            )
+            .all()
+        )
+
+        interview_records = [
+            {
+                "role": item.role,
+                "content": item.content,
+                "score": item.score,
+                "feedback": item.feedback
+            }
+            for item in interview_messages
+        ]
+
+        report_sources = retrieve_documents(
+            "面试能力 技术实践 项目实现 薄弱知识点",
+            user_id,
+            db,
+            n_results=5
+        )
+
+        report = generate_interview_report(
+            resume.structured_data,
+            interview_records,
+            report_sources
+        )
+
+        interview.report = report
+
+
     else:
         interview.current_question = next_question
 
@@ -236,4 +286,39 @@ def get_interview(
             }
             for item in messages
         ]
+    }
+
+
+@router.get("/interviews/{interview_id}/report")
+def get_interview_report(
+    interview_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    user_id = current_user["id"]
+
+    interview = (
+        db.query(Interview)
+        .filter(
+            Interview.id == interview_id,
+            Interview.user_id == user_id
+        )
+        .first()
+    )
+
+    if not interview:
+        raise HTTPException(
+            status_code=404,
+            detail="面试不存在"
+        )
+
+    if interview.status != "finished":
+        raise HTTPException(
+            status_code=400,
+            detail="面试尚未结束"
+        )
+
+    return {
+        "interview_id": interview.id,
+        "report": interview.report
     }

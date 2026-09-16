@@ -261,3 +261,176 @@ next_question：
 
     return json.loads(content)
 
+
+def evaluate_interview_answer_with_knowledge(
+    resume_data,
+    knowledge_sources,
+    question,
+    answer
+):
+    knowledge_context = "\n\n".join(
+        [
+            source["content"]
+            for source in knowledge_sources
+        ]
+    )
+
+    prompt = f"""
+你是一名专业的技术面试官。
+
+请根据以下四部分信息评价候选人的回答：
+
+【候选人简历】
+{json.dumps(
+    resume_data,
+    ensure_ascii=False,
+    indent=2
+)}
+
+【候选人的知识库内容】
+{knowledge_context}
+
+【面试问题】
+{question}
+
+【候选人回答】
+{answer}
+
+请返回严格 JSON：
+
+{{
+    "score": 0,
+    "feedback": "",
+    "knowledge_gap": [],
+    "next_question": "",
+    "finished": false
+}}
+
+评价要求：
+
+1. score 为 0-100 的整数。
+2. feedback 说明回答正确的地方和不足。
+3. knowledge_gap 表示候选人回答暴露出的知识薄弱点。
+4. 必须区分：
+   - 简历中写过但回答不清楚
+   - 知识库中有相关内容但候选人没有掌握
+   - 简历和知识库都没有足够信息
+5. 不要因为简历写了某项技术，就默认候选人真的掌握。
+6. 不要编造知识库不存在的内容。
+7. next_question 必须继续围绕简历中的项目或技术进行追问。
+8. 如果已经完成本轮面试，将 finished 设置为 true。
+9. 只返回 JSON。
+10. 不要返回 Markdown。
+"""
+
+    response = client.chat.completions.create(
+        model="glm-4.5",
+        messages=[
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        temperature=0.5
+    )
+
+    content = response.choices[0].message.content.strip()
+
+    if content.startswith("```"):
+        content = content.replace(
+            "```json",
+            ""
+        )
+        content = content.replace(
+            "```",
+            ""
+        )
+        content = content.strip()
+
+    return json.loads(content)
+
+def generate_interview_report(
+    resume_data,
+    interview_records,
+    knowledge_sources
+):
+    prompt = f"""
+你是一名专业的技术面试评估专家。
+
+请根据候选人的简历、面试记录以及知识库内容生成最终面试报告。
+
+【简历】
+{json.dumps(
+    resume_data,
+    ensure_ascii=False,
+    indent=2
+)}
+
+【面试记录】
+{json.dumps(
+    interview_records,
+    ensure_ascii=False,
+    indent=2
+)}
+
+【知识库相关内容】
+{json.dumps(
+    knowledge_sources,
+    ensure_ascii=False,
+    indent=2
+)}
+
+请严格返回：
+
+{{
+    "overall_score": 0,
+    "project_ability": 0,
+    "technical_ability": 0,
+    "practical_ability": 0,
+    "communication_ability": 0,
+    "strengths": [],
+    "weaknesses": [],
+    "knowledge_gaps": [],
+    "suggestions": []
+}}
+
+要求：
+
+1. 所有分数为 0-100。
+2. 不要因为简历写了某项技术就默认候选人掌握。
+3. 根据实际回答判断项目能力。
+4. 根据回答和知识库判断知识掌握情况。
+5. knowledge_gaps 只填写实际暴露出的薄弱知识点。
+6. 不要编造面试记录中没有出现的信息。
+7. 只返回 JSON。
+"""
+
+    response = client.chat.completions.create(
+        model="glm-4.5",
+        messages=[
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        temperature=0.3
+    )
+
+    content = response.choices[0].message.content.strip()
+
+    if content.startswith("```"):
+        content = content.replace(
+            "```json",
+            ""
+        )
+        content = content.replace(
+            "```",
+            ""
+        )
+        content = content.strip()
+
+    return json.loads(content)
+
+
+
+
