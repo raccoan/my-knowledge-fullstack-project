@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {
+  computed,
   onMounted,
   ref,
 } from 'vue'
@@ -18,8 +19,23 @@ import {
   useRouter,
 } from 'vue-router'
 
+import {
+  getInterviews,
+} from '@/api/interviews'
+
+import type {
+  InterviewListItem,
+} from '@/api/interviews'
+
 
 const router = useRouter()
+
+
+/**
+ * =========================
+ * 简历
+ * =========================
+ */
 
 const resumes = ref<Resume[]>([])
 
@@ -30,6 +46,9 @@ const uploading = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
 
 
+/**
+ * 获取简历列表
+ */
 const loadResumes = async () => {
   try {
     resumes.value = await getResumes()
@@ -39,30 +58,45 @@ const loadResumes = async () => {
     }
   } catch (error) {
     console.error(error)
-    message.error('获取简历失败')
+
+    message.error(
+      '获取简历失败',
+    )
   }
 }
 
 
+/**
+ * 点击上传按钮
+ */
 const selectFile = () => {
   fileInput.value?.click()
 }
 
 
+/**
+ * 上传简历
+ */
 const handleFileChange = async (
   event: Event,
 ) => {
   const target =
     event.target as HTMLInputElement
 
-  const file = target.files?.[0]
+  const file =
+    target.files?.[0]
 
   if (!file) {
     return
   }
 
+  /**
+   * 目前只支持 PDF
+   */
   if (file.type !== 'application/pdf') {
-    message.error('目前只支持 PDF 文件')
+    message.error(
+      '目前只支持 PDF 文件',
+    )
 
     target.value = ''
 
@@ -72,17 +106,26 @@ const handleFileChange = async (
   uploading.value = true
 
   try {
-    const result = await uploadResume(file)
+    const result =
+      await uploadResume(file)
 
     message.success(
       '简历上传并解析成功',
     )
 
-    const resume = result.resume
+    const resume =
+      result.resume
 
+    /**
+     * 添加到简历列表顶部
+     */
     resumes.value.unshift(resume)
 
-    currentResume.value = resume
+    /**
+     * 自动选中新上传的简历
+     */
+    currentResume.value =
+      resume
   } catch (error) {
     console.error(error)
 
@@ -97,6 +140,66 @@ const handleFileChange = async (
 }
 
 
+/**
+ * =========================
+ * AI 面试
+ * =========================
+ */
+
+/**
+ * 当前用户所有面试记录
+ */
+const interviews =
+  ref<InterviewListItem[]>([])
+
+
+/**
+ * 加载历史面试
+ */
+const loadInterviews = async () => {
+  try {
+    const data =
+      await getInterviews()
+
+    interviews.value =
+      data
+  } catch (error) {
+    console.error(
+      '获取历史面试失败:',
+      error,
+    )
+  }
+}
+
+
+/**
+ * 当前简历对应的历史面试
+ *
+ * 比如：
+ *
+ * 当前简历 ID = 1
+ *
+ * 那么这里只显示：
+ *
+ * interview.resume_id === 1
+ */
+const currentResumeInterviews =
+  computed(() => {
+    if (!currentResume.value) {
+      return []
+    }
+
+    return interviews.value.filter(
+      interview =>
+        interview.resume_id ===
+        currentResume.value!.id,
+    )
+  })
+
+
+/**
+ * 开始新的 AI 面试
+ */
 const startInterview = () => {
   if (!currentResume.value) {
     message.warning(
@@ -118,14 +221,101 @@ const startInterview = () => {
     path: '/interview',
     query: {
       resumeId:
-        currentResume.value.id,
+        String(
+          currentResume.value.id,
+        ),
     },
   })
 }
 
 
-onMounted(() => {
-  loadResumes()
+/**
+ * 根据指定简历开始新的 AI 面试
+ */
+const startNewInterview = (
+  resumeId: number,
+) => {
+  router.push({
+    path: '/interview',
+    query: {
+      resumeId:
+        String(resumeId),
+    },
+  })
+}
+
+
+/**
+ * 查看 / 继续历史面试
+ */
+const openInterview = (
+  interview: InterviewListItem,
+) => {
+  router.push({
+    path: '/interview',
+    query: {
+      id:
+        String(interview.id),
+    },
+  })
+}
+
+
+/**
+ * 格式化面试时间
+ */
+const formatInterviewTime = (
+  time: string,
+) => {
+  if (!time) {
+    return '-'
+  }
+
+  return new Date(
+    time,
+  ).toLocaleString(
+    'zh-CN',
+    {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    },
+  )
+}
+
+
+/**
+ * 获取面试状态文字
+ */
+const getInterviewStatusText = (
+  status: string,
+) => {
+  if (status === 'finished') {
+    return '已完成'
+  }
+
+  return '进行中'
+}
+
+
+/**
+ * =========================
+ * 生命周期
+ * =========================
+ */
+
+onMounted(async () => {
+  /**
+   * 获取简历
+   */
+  await loadResumes()
+
+  /**
+   * 获取历史面试
+   */
+  await loadInterviews()
 })
 </script>
 
@@ -133,7 +323,10 @@ onMounted(() => {
 <template>
   <div class="resume-page">
 
-    <!-- 顶部 -->
+    <!-- =========================
+         顶部
+    ========================== -->
+
     <div class="page-header">
 
       <div>
@@ -146,8 +339,10 @@ onMounted(() => {
         </div>
       </div>
 
+
       <div class="header-actions">
 
+        <!-- 隐藏文件选择框 -->
         <input
           ref="fileInput"
           type="file"
@@ -156,6 +351,8 @@ onMounted(() => {
           @change="handleFileChange"
         />
 
+
+        <!-- 上传简历 -->
         <a-button
           type="primary"
           :loading="uploading"
@@ -164,8 +361,11 @@ onMounted(() => {
           上传简历
         </a-button>
 
+
+        <!-- 开始 AI 面试 -->
         <a-button
-          :disabled="!currentResume?.structured_data"
+          type="primary"
+          :disabled="!currentResume"
           @click="startInterview"
         >
           开始 AI 面试
@@ -176,17 +376,25 @@ onMounted(() => {
     </div>
 
 
+    <!-- =========================
+         有简历
+    ========================== -->
+
     <div
       v-if="currentResume"
       class="resume-content"
     >
 
-      <!-- 左侧简历列表 -->
+      <!-- =========================
+           左侧简历列表
+      ========================== -->
+
       <div class="resume-sidebar">
 
         <div class="sidebar-title">
           我的简历
         </div>
+
 
         <a-list
           size="small"
@@ -199,7 +407,8 @@ onMounted(() => {
               class="resume-item"
               :class="{
                 active:
-                  currentResume?.id === item.id,
+                  currentResume?.id ===
+                  item.id,
               }"
               @click="
                 currentResume = item
@@ -209,6 +418,7 @@ onMounted(() => {
               <div class="resume-item-name">
                 {{ item.filename }}
               </div>
+
 
               <div class="resume-item-time">
                 {{
@@ -227,12 +437,17 @@ onMounted(() => {
       </div>
 
 
-      <!-- 右侧 -->
+      <!-- =========================
+           右侧简历详情
+      ========================== -->
+
       <div class="resume-detail">
 
+        <!-- 简历标题 -->
         <div class="resume-title-row">
 
           <div>
+
             <div class="resume-title">
               {{ currentResume.filename }}
             </div>
@@ -240,7 +455,9 @@ onMounted(() => {
             <a-tag color="green">
               AI 已解析
             </a-tag>
+
           </div>
+
 
           <a-button
             type="primary"
@@ -252,6 +469,10 @@ onMounted(() => {
         </div>
 
 
+        <!-- =========================
+             简历结构化内容
+        ========================== -->
+
         <div
           v-if="
             currentResume.structured_data
@@ -259,7 +480,10 @@ onMounted(() => {
           class="resume-sections"
         >
 
-          <!-- 基本信息 -->
+          <!-- =========================
+               基本信息
+          ========================== -->
+
           <a-card
             title="基本信息"
             :bordered="false"
@@ -279,6 +503,7 @@ onMounted(() => {
                 }}
               </a-descriptions-item>
 
+
               <a-descriptions-item label="电话">
                 {{
                   currentResume
@@ -288,6 +513,7 @@ onMounted(() => {
                 }}
               </a-descriptions-item>
 
+
               <a-descriptions-item label="邮箱">
                 {{
                   currentResume
@@ -296,6 +522,7 @@ onMounted(() => {
                     .email
                 }}
               </a-descriptions-item>
+
 
               <a-descriptions-item label="所在地">
                 {{
@@ -311,7 +538,10 @@ onMounted(() => {
           </a-card>
 
 
-          <!-- 技能 -->
+          <!-- =========================
+               技能
+          ========================== -->
+
           <a-card
             title="技能"
             :bordered="false"
@@ -335,7 +565,10 @@ onMounted(() => {
           </a-card>
 
 
-          <!-- 教育 -->
+          <!-- =========================
+               教育经历
+          ========================== -->
+
           <a-card
             title="教育经历"
             :bordered="false"
@@ -359,14 +592,23 @@ onMounted(() => {
                       {{ item.school }}
                     </template>
 
+
                     <template #description>
+
                       {{ item.major }}
+
                       ·
+
                       {{ item.degree }}
+
                       ·
+
                       {{ item.start_date }}
+
                       -
+
                       {{ item.end_date }}
+
                     </template>
 
                   </a-list-item-meta>
@@ -380,7 +622,10 @@ onMounted(() => {
           </a-card>
 
 
-          <!-- 项目 -->
+          <!-- =========================
+               项目经历
+          ========================== -->
+
           <a-card
             title="项目经历"
             :bordered="false"
@@ -400,15 +645,19 @@ onMounted(() => {
                 {{ project.name }}
               </template>
 
+
               <p>
                 {{ project.description }}
               </p>
 
+
+              <!-- 技术栈 -->
               <div class="tag-list">
 
                 <a-tag
                   v-for="
-                    technology in project.technologies
+                    technology in project
+                      .technologies
                   "
                   :key="technology"
                 >
@@ -417,9 +666,13 @@ onMounted(() => {
 
               </div>
 
+
+              <!-- 项目职责 -->
               <div
                 v-if="
-                  project.responsibilities.length
+                  project
+                    .responsibilities
+                    .length
                 "
                 class="project-block"
               >
@@ -428,22 +681,30 @@ onMounted(() => {
                   项目职责
                 </div>
 
+
                 <ul>
+
                   <li
                     v-for="
-                      item in project.responsibilities
+                      item in project
+                        .responsibilities
                     "
                     :key="item"
                   >
                     {{ item }}
                   </li>
+
                 </ul>
 
               </div>
 
+
+              <!-- 项目亮点 -->
               <div
                 v-if="
-                  project.highlights.length
+                  project
+                    .highlights
+                    .length
                 "
                 class="project-block"
               >
@@ -452,15 +713,19 @@ onMounted(() => {
                   项目亮点
                 </div>
 
+
                 <ul>
+
                   <li
                     v-for="
-                      item in project.highlights
+                      item in project
+                        .highlights
                     "
                     :key="item"
                   >
                     {{ item }}
                   </li>
+
                 </ul>
 
               </div>
@@ -470,7 +735,10 @@ onMounted(() => {
           </a-card>
 
 
-          <!-- 实习 -->
+          <!-- =========================
+               实习经历
+          ========================== -->
+
           <a-card
             title="实习经历"
             :bordered="false"
@@ -493,25 +761,35 @@ onMounted(() => {
                 {{ internship.company }}
               </template>
 
+
               <div>
                 {{ internship.position }}
               </div>
 
+
               <div class="time">
+
                 {{ internship.start_date }}
+
                 -
+
                 {{ internship.end_date }}
+
               </div>
 
+
               <ul>
+
                 <li
                   v-for="
-                    item in internship.responsibilities
+                    item in internship
+                      .responsibilities
                   "
                   :key="item"
                 >
                   {{ item }}
                 </li>
+
               </ul>
 
             </a-card>
@@ -519,7 +797,10 @@ onMounted(() => {
           </a-card>
 
 
-          <!-- 自我评价 -->
+          <!-- =========================
+               自我评价
+          ========================== -->
+
           <a-card
             v-if="
               currentResume
@@ -540,6 +821,160 @@ onMounted(() => {
 
           </a-card>
 
+
+          <!-- =========================
+               历史面试
+          ========================== -->
+
+          <a-card
+            title="历史面试"
+            :bordered="false"
+            class="interview-history-card"
+          >
+
+            <!-- 右上角：开始新面试 -->
+            <template #extra>
+
+              <a-button
+                type="primary"
+                size="small"
+                @click="
+                  startNewInterview(
+                    currentResume.id,
+                  )
+                "
+              >
+                开始新面试
+              </a-button>
+
+            </template>
+
+
+            <!-- 没有历史面试 -->
+            <a-empty
+              v-if="
+                currentResumeInterviews.length === 0
+              "
+              description="这份简历还没有面试记录"
+            />
+
+
+            <!-- 有历史面试 -->
+            <div
+              v-else
+              class="interview-history-list"
+            >
+
+              <div
+                v-for="
+                  interview in currentResumeInterviews
+                "
+                :key="interview.id"
+                class="interview-history-item"
+              >
+
+                <!-- 左侧信息 -->
+                <div
+                  class="interview-history-info"
+                >
+
+                  <div
+                    class="interview-history-title"
+                  >
+                    AI 模拟面试 #{{ interview.id }}
+                  </div>
+
+
+                  <div
+                    class="interview-history-time"
+                  >
+                    {{
+                      formatInterviewTime(
+                        interview.created_at,
+                      )
+                    }}
+                  </div>
+
+                </div>
+
+
+                <!-- 中间状态 / 分数 -->
+                <div
+                  class="interview-history-score"
+                >
+
+                  <!-- 已完成 -->
+                  <template
+                    v-if="
+                      interview.status ===
+                      'finished'
+                    "
+                  >
+
+                    <span class="score">
+                      {{ interview.total_score }}
+                      分
+                    </span>
+
+                    <a-tag color="success">
+                      {{
+                        getInterviewStatusText(
+                          interview.status,
+                        )
+                      }}
+                    </a-tag>
+
+                  </template>
+
+
+                  <!-- 进行中 -->
+                  <template v-else>
+
+                    <a-tag
+                      color="processing"
+                    >
+                      {{
+                        getInterviewStatusText(
+                          interview.status,
+                        )
+                      }}
+                    </a-tag>
+
+                  </template>
+
+                </div>
+
+
+                <!-- 右侧按钮 -->
+                <div
+                  class="interview-history-action"
+                >
+
+                  <a-button
+                    size="small"
+                    type="link"
+                    @click="
+                      openInterview(
+                        interview,
+                      )
+                    "
+                  >
+                    {{
+                      interview.status ===
+                      'ongoing'
+                        ? '继续面试'
+                        : '查看记录'
+                    }}
+                  </a-button>
+
+                </div>
+
+              </div>
+
+            </div>
+
+          </a-card>
+
         </div>
 
       </div>
@@ -547,7 +982,10 @@ onMounted(() => {
     </div>
 
 
-    <!-- 没有简历 -->
+    <!-- =========================
+         没有简历
+    ========================== -->
+
     <div
       v-else
       class="empty-page"
@@ -574,6 +1012,10 @@ onMounted(() => {
 
 
 <style scoped>
+/* =========================
+   页面
+========================= */
+
 .resume-page {
   height: 100%;
   display: flex;
@@ -581,12 +1023,19 @@ onMounted(() => {
   background: #f5f5f5;
 }
 
+
+/* =========================
+   顶部
+========================= */
+
 .page-header {
   min-height: 72px;
   padding: 0 24px;
+
   display: flex;
   align-items: center;
   justify-content: space-between;
+
   background: #fff;
   border-bottom: 1px solid #f0f0f0;
 }
@@ -607,21 +1056,37 @@ onMounted(() => {
   gap: 12px;
 }
 
+
+/* =========================
+   简历主体
+========================= */
+
 .resume-content {
   flex: 1;
   min-height: 0;
+
   display: flex;
   gap: 16px;
+
   padding: 16px;
+
   overflow: hidden;
 }
+
+
+/* =========================
+   左侧简历列表
+========================= */
 
 .resume-sidebar {
   width: 240px;
   flex-shrink: 0;
+
   padding: 16px;
+
   background: #fff;
   border-radius: 10px;
+
   overflow-y: auto;
 }
 
@@ -633,7 +1098,9 @@ onMounted(() => {
 .resume-item {
   display: block;
   padding: 12px !important;
+
   cursor: pointer;
+
   border-radius: 6px;
 }
 
@@ -657,24 +1124,33 @@ onMounted(() => {
   font-size: 12px;
 }
 
+
+/* =========================
+   右侧简历
+========================= */
+
 .resume-detail {
   flex: 1;
   min-width: 0;
+
   overflow-y: auto;
 }
 
 .resume-title-row {
   margin-bottom: 16px;
   padding: 20px 24px;
+
   display: flex;
   align-items: center;
   justify-content: space-between;
+
   background: #fff;
   border-radius: 10px;
 }
 
 .resume-title {
   margin-bottom: 8px;
+
   font-size: 18px;
   font-weight: 600;
 }
@@ -685,11 +1161,21 @@ onMounted(() => {
   gap: 16px;
 }
 
+
+/* =========================
+   标签
+========================= */
+
 .tag-list {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
+
+
+/* =========================
+   项目
+========================= */
 
 .project-card {
   margin-bottom: 12px;
@@ -709,10 +1195,181 @@ onMounted(() => {
   color: #999;
 }
 
+
+/* =========================
+   历史面试
+========================= */
+
+.interview-history-card {
+  margin-top: 0;
+  border-radius: 10px;
+}
+
+.interview-history-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.interview-history-item {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+
+  padding: 16px 0;
+
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.interview-history-item:last-child {
+  border-bottom: none;
+}
+
+
+/* 历史面试左侧 */
+
+.interview-history-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.interview-history-title {
+  color: #262626;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.interview-history-time {
+  margin-top: 5px;
+  color: #8c8c8c;
+  font-size: 12px;
+}
+
+
+/* 分数 */
+
+.interview-history-score {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.score {
+  color: #1677ff;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+
+/* 操作 */
+
+.interview-history-action {
+  flex-shrink: 0;
+}
+
+
+/* =========================
+   空状态
+========================= */
+
 .empty-page {
   flex: 1;
+
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+
+/* =========================
+   响应式
+========================= */
+
+@media (max-width: 992px) {
+  .resume-content {
+    padding: 12px;
+  }
+
+  .resume-sidebar {
+    width: 200px;
+  }
+}
+
+
+@media (max-width: 768px) {
+
+  .page-header {
+    min-height: auto;
+    padding: 12px 16px;
+
+    align-items: flex-start;
+    flex-direction: column;
+
+    gap: 12px;
+  }
+
+
+  .header-actions {
+    width: 100%;
+  }
+
+
+  .header-actions .ant-btn {
+    flex: 1;
+  }
+
+
+  .resume-content {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+
+  .resume-sidebar {
+    width: 100%;
+    max-height: 180px;
+  }
+
+
+  .resume-detail {
+    overflow-y: visible;
+  }
+
+
+  .resume-title-row {
+    padding: 16px;
+
+    align-items: flex-start;
+    flex-direction: column;
+
+    gap: 12px;
+  }
+
+
+  .resume-title-row .ant-btn {
+    width: 100%;
+  }
+
+
+  .interview-history-item {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+
+  .interview-history-score {
+    width: 100%;
+  }
+
+
+  .interview-history-action {
+    width: 100%;
+  }
+
+
+  .interview-history-action .ant-btn {
+    padding-left: 0;
+  }
+
 }
 </style>

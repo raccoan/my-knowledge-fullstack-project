@@ -48,6 +48,18 @@ export interface InterviewReport {
   suggestions: string[]
 }
 
+export interface InterviewListItem {
+  id: number
+  resume_id: number
+  status: 'ongoing' | 'finished'
+  total_score: number
+  created_at: string
+  updated_at: string
+}
+
+
+
+
 export async function createInterview(
   resumeId: number
 ) {
@@ -108,3 +120,14 @@ export async function getInterviewReport(
 
   return response.data
 }
+
+export async function getInterviews() {
+  const response = await request.get<InterviewListItem[]>(
+    '/interviews'
+  )
+
+  return response.data
+}
+
+
+
