@@ -43,3 +43,8 @@ class InterviewMessage(Base):
         DateTime,
         server_default=func.now()
     )
+
+    reference_answer = Column(
+        Text,
+        nullable=True,
+    )

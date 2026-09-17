@@ -12,5 +12,7 @@ class AnswerInterviewRequest(BaseModel):
 class InterviewAnswerResponse(BaseModel):
     score: int
     feedback: str
+    reference_answer:str
+    knowledge_gap:list[str]
     next_question: str
     finished: bool

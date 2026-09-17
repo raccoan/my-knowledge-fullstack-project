@@ -301,6 +301,7 @@ def evaluate_interview_answer_with_knowledge(
 {{
     "score": 0,
     "feedback": "",
+    "reference_answer": "",
     "knowledge_gap": [],
     "next_question": "",
     "finished": false
@@ -309,18 +310,36 @@ def evaluate_interview_answer_with_knowledge(
 评价要求：
 
 1. score 为 0-100 的整数。
-2. feedback 说明回答正确的地方和不足。
-3. knowledge_gap 表示候选人回答暴露出的知识薄弱点。
-4. 必须区分：
+
+2. feedback 分析候选人的回答正确的地方和不足。
+
+3. reference_answer：
+   给出这道题一个适合技术面试场景的参考答案。
+   不管候选人回答正确与否，都必须提供参考答案。
+
+4. knowledge_gap：
+   根据候选人的回答，列出候选人没有掌握或者回答不充分的知识点。
+
+5. 必须区分：
    - 简历中写过但回答不清楚
    - 知识库中有相关内容但候选人没有掌握
    - 简历和知识库都没有足够信息
-5. 不要因为简历写了某项技术，就默认候选人真的掌握。
-6. 不要编造知识库不存在的内容。
-7. next_question 必须继续围绕简历中的项目或技术进行追问。
-8. 如果已经完成本轮面试，将 finished 设置为 true。
-9. 只返回 JSON。
-10. 不要返回 Markdown。
+
+6. 不要因为简历写了某项技术，就默认候选人真的掌握。
+
+7. 不要编造简历和知识库中不存在的候选人经历。
+
+8. next_question 必须根据候选人的简历、当前问题和回答情况继续追问。
+   优先围绕候选人的项目经历、技术栈和实际工作内容进行提问。
+
+9. finished 表示模型认为当前面试是否适合结束。
+   但是最终是否结束由后端控制。
+
+10. 只返回 JSON。
+
+11. 不要返回 Markdown。
+
+12. 不要返回 ```json 或 ``` 包裹。
 """
 
     response = client.chat.completions.create(
