@@ -194,6 +194,7 @@ def answer_interview(
     candidate_message.score = score
     candidate_message.feedback = feedback
     candidate_message.reference_answer = reference_answer
+    candidate_message.knowledge_gap = knowledge_gap
 
     db.add(candidate_message)
 
@@ -248,7 +249,8 @@ def answer_interview(
                 "content": item.content,
                 "score": item.score,
                 "feedback": item.feedback,
-                "reference_answer": item.reference_answer
+                "reference_answer": item.reference_answer,
+                "knowledge_gap": item.knowledge_gap,
             }
             for item in interview_messages
         ]
@@ -386,3 +388,35 @@ def get_interview_report(
         "total_score": interview.total_score,
         "report": interview.report
     }
+
+
+@router.get("/interviews")
+def get_interviews(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    user_id = current_user["id"]
+
+    interviews = (
+        db.query(Interview)
+        .filter(
+            Interview.user_id == user_id
+        )
+        .order_by(
+            Interview.created_at.desc()
+        )
+        .all()
+    )
+
+    return [
+        {
+            "id": interview.id,
+            "resume_id": interview.resume_id,
+            "status": interview.status,
+            "total_score": interview.total_score,
+            "created_at": interview.created_at,
+            "updated_at": interview.updated_at
+        }
+        for interview in interviews
+    ]
+

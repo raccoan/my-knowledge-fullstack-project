@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime
+from sqlalchemy import Column, Integer,JSON, String, Text, DateTime
 from sqlalchemy.sql import func
 
 from database import Base
@@ -48,3 +48,9 @@ class InterviewMessage(Base):
         Text,
         nullable=True,
     )
+
+    knowledge_gap = Column(
+        JSON,
+        nullable=True
+    )
+
