@@ -260,7 +260,27 @@
                           {{ message.feedback }}
                         </div>
                       </div>
+                      <div
+                        v-if="
+                          message.knowledge_gap &&
+                          message.knowledge_gap.length
+                        "
+                        class="knowledge-gap"
+                      >
+                        <div class="feedback-title">
+                          薄弱知识点
+                        </div>
 
+                        <div class="knowledge-gap-list">
+                          <a-tag
+                            v-for="gap in message.knowledge_gap"
+                            :key="gap"
+                            color="orange"
+                          >
+                            {{ gap }}
+                          </a-tag>
+                        </div>
+                      </div>
                       <!-- 参考答案 -->
                       <div
                         v-if="message.reference_answer"
@@ -702,7 +722,8 @@ const startInterview = async () => {
         score: null,
         feedback: null,
         reference_answer: null,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        knowledge_gap: [],
       }
     ]
 
@@ -821,19 +842,17 @@ const submitAnswer = async () => {
       )
 
     /**
-     * 先把用户回答添加到页面
-     */
-    messages.value.push({
-      id: Date.now(),
-      role: 'candidate',
-      content: currentAnswer,
-      score: data.score,
-      feedback: data.feedback,
-      reference_answer:
-        data.reference_answer,
-      created_at:
-        new Date().toISOString()
-    })
+ * 后端已经把回答、评分、反馈等信息保存到数据库
+ *
+ * 这里重新加载一次面试记录，
+ * 保证前端显示的数据和数据库保持一致
+ */
+const latestInterview = await getInterview(
+  interviewId.value
+)
+
+messages.value =
+  latestInterview.messages || []
 
     /**
      * 清空输入框
@@ -899,6 +918,7 @@ const submitAnswer = async () => {
         score: null,
         feedback: null,
         reference_answer: null,
+        knowledge_gap: [],
         created_at:
           new Date().toISOString()
       })
@@ -1454,5 +1474,15 @@ onMounted(async () => {
   .report-actions .ant-btn {
     width: 100%;
   }
+}
+.knowledge-gap {
+  margin-top: 12px;
+}
+
+.knowledge-gap-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
 }
 </style>

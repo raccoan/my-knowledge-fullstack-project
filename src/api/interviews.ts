@@ -8,6 +8,7 @@ export interface InterviewMessage {
   feedback: string | null
   reference_answer: string | null
   created_at: string
+  knowledge_gap: string[]
 }
 
 export interface Interview {
