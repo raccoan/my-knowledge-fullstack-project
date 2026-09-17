@@ -6,6 +6,7 @@ export interface InterviewMessage {
   content: string
   score: number | null
   feedback: string | null
+  reference_answer: string | null
   created_at: string
 }
 
@@ -28,8 +29,11 @@ export interface CreateInterviewResponse {
 export interface AnswerInterviewResponse {
   score: number
   feedback: string
+  reference_answer: string
+  knowledge_gap: string[]
   next_question: string
   finished: boolean
+  report?: InterviewReport
 }
 
 export interface InterviewReport {
@@ -50,11 +54,12 @@ export async function createInterview(
   const response = await request.post<CreateInterviewResponse>(
     '/interviews',
     {
-      resume_id: resumeId,
+      resume_id: resumeId
     },
     {
       timeout: 120000,
-    },
+    }
+    
   )
 
   return response.data
@@ -62,14 +67,18 @@ export async function createInterview(
 
 export async function answerInterview(
   interviewId: number,
-  answer: string,
+  answer: string
 ) {
-  const response = await request.post<AnswerInterviewResponse>(
-    `/interviews/${interviewId}/answer`,
-    {
-      answer,
-    },
-  )
+  const response =
+    await request.post<AnswerInterviewResponse>(
+      `/interviews/${interviewId}/answer`,
+      {
+        answer
+      },
+      {
+        timeout: 120000,
+      }
+    )
 
   return response.data
 }
@@ -77,25 +86,25 @@ export async function answerInterview(
 export async function getInterview(
   interviewId: number
 ) {
-  const response = await request.get<Interview>(
-    `/interviews/${interviewId}`,
-  )
-
-  return response.data
-}
-
-
-export async function getInterviewReport(
-  interviewId: number,
-) {
   const response =
-    await request.get<{
-      interview_id: number
-      report: InterviewReport
-    }>(
-      `/interviews/${interviewId}/report`,
+    await request.get<Interview>(
+      `/interviews/${interviewId}`
     )
 
   return response.data
 }
 
+export async function getInterviewReport(
+  interviewId: number
+) {
+  const response =
+    await request.get<{
+      interview_id: number
+      total_score: number
+      report: InterviewReport
+    }>(
+      `/interviews/${interviewId}/report`
+    )
+
+  return response.data
+}

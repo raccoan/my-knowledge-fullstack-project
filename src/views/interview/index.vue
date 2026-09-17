@@ -1,65 +1,81 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { message } from 'ant-design-vue'
-import { useRoute } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import {
+  message
+} from 'ant-design-vue'
 
 import {
   createInterview,
   answerInterview,
   getInterview,
-  getInterviewReport,
-  type InterviewReport,
   type InterviewMessage,
+  type InterviewReport
 } from '@/api/interviews'
 
 const route = useRoute()
+const router = useRouter()
 
 const interviewId = ref<number | null>(null)
 
 const loading = ref(false)
-const answering = ref(false)
-const finished = ref(false)
+const submitting = ref(false)
 
 const question = ref('')
 const answer = ref('')
 
-const score = ref<number | null>(null)
-const feedback = ref('')
-
 const messages = ref<InterviewMessage[]>([])
 
-const resumeId = Number(
-  route.query.resumeId
-)
+const currentScore = ref<number | null>(null)
+const currentFeedback = ref('')
+const referenceAnswer = ref('')
+const knowledgeGap = ref<string[]>([])
+
+const showReferenceAnswer = ref(false)
+
+const finished = ref(false)
 
 const report = ref<InterviewReport | null>(null)
 
+
 const startInterview = async () => {
+  const resumeId = Number(
+    route.query.resumeId
+  )
+
   if (!resumeId) {
-    message.error('缺少简历ID')
+    message.error('没有指定简历')
     return
   }
 
   loading.value = true
 
   try {
-    const result = await createInterview(
+    const data = await createInterview(
       resumeId
     )
 
-    interviewId.value = result.id
-    question.value = result.question
+    interviewId.value = data.id
+    question.value = data.question
 
     messages.value = [
       {
         id: Date.now(),
         role: 'interviewer',
-        content: result.question,
+        content: data.question,
         score: null,
         feedback: null,
-        created_at: new Date().toISOString(),
-      },
+        reference_answer: null,
+        created_at: new Date().toISOString()
+      }
     ]
+
+    router.replace({
+      path: '/interview',
+      query: {
+        id: String(data.id)
+      }
+    })
   } catch (error) {
     console.error(error)
     message.error('创建面试失败')
@@ -69,499 +85,545 @@ const startInterview = async () => {
 }
 
 
-const submitAnswer = async () => {
-  if (!interviewId.value) {
-    message.error('面试尚未开始')
-    return
-  }
-
-  if (!answer.value.trim()) {
-    message.warning('请输入回答')
-    return
-  }
-
-  answering.value = true
-
-  try {
-    const currentAnswer = answer.value
-
-    messages.value.push({
-      id: Date.now(),
-      role: 'candidate',
-      content: currentAnswer,
-      score: null,
-      feedback: null,
-      created_at: new Date().toISOString(),
-    })
-
-    answer.value = ''
-
-    const result = await answerInterview(
-      interviewId.value,
-      currentAnswer
-    )
-
-    score.value = result.score
-    feedback.value = result.feedback
-
-    if (result.finished) {
-      finished.value = true
-      question.value = ''
-
-      await loadReport()
-    } else {
-      question.value = result.next_question
-
-      messages.value.push({
-        id: Date.now() + 1,
-        role: 'interviewer',
-        content: result.next_question,
-        score: result.score,
-        feedback: result.feedback,
-        created_at: new Date().toISOString(),
-      })
-    }
-  } catch (error) {
-    console.error(error)
-    message.error('提交回答失败')
-  } finally {
-    answering.value = false
-  }
-}
-
-
 const loadInterview = async () => {
-  if (!route.params.id) {
-    return
-  }
-
   const id = Number(
-    route.params.id
+    route.query.id
   )
 
   if (!id) {
     return
   }
 
-  try {
-    const result = await getInterview(id)
+  loading.value = true
 
-    interviewId.value = result.id
-    messages.value = result.messages
-    finished.value = result.status === 'finished'
+  try {
+    const data = await getInterview(id)
+
+    interviewId.value = data.id
     question.value =
-      result.current_question || ''
+      data.current_question || ''
+
+    messages.value = data.messages
+
+    finished.value =
+      data.status === 'finished'
   } catch (error) {
     console.error(error)
     message.error('加载面试失败')
+  } finally {
+    loading.value = false
   }
 }
 
 
-const loadReport = async () => {
+const submitAnswer = async () => {
+  if (!answer.value.trim()) {
+    message.warning('请输入回答')
+    return
+  }
+
   if (!interviewId.value) {
     return
   }
 
-  try {
-    const result =
-      await getInterviewReport(
-        interviewId.value
-      )
+  submitting.value = true
 
-    report.value = result.report
+  try {
+    const data = await answerInterview(
+      interviewId.value,
+      answer.value
+    )
+
+    currentScore.value =
+      data.score
+
+    currentFeedback.value =
+      data.feedback
+
+    referenceAnswer.value =
+      data.reference_answer
+
+    knowledgeGap.value =
+      data.knowledge_gap
+
+    showReferenceAnswer.value =
+      false
+
+    messages.value.push({
+      id: Date.now(),
+      role: 'candidate',
+      content: answer.value,
+      score: data.score,
+      feedback: data.feedback,
+      reference_answer:
+        data.reference_answer,
+      created_at:
+        new Date().toISOString()
+    })
+
+    answer.value = ''
+
+    if (data.finished) {
+      finished.value = true
+      report.value =
+        data.report || null
+
+      return
+    }
+
+    question.value =
+      data.next_question
+
+    messages.value.push({
+      id: Date.now() + 1,
+      role: 'interviewer',
+      content: data.next_question,
+      score: null,
+      feedback: null,
+      reference_answer: null,
+      created_at:
+        new Date().toISOString()
+    })
+
   } catch (error) {
     console.error(error)
-    message.error('获取面试报告失败')
+    message.error('提交回答失败')
+  } finally {
+    submitting.value = false
   }
 }
 
 
-onMounted(async () => {
-  if (route.params.id) {
-    await loadInterview()
+onMounted(() => {
+  const id = Number(
+    route.query.id
+  )
+
+  if (id) {
+    loadInterview()
   } else {
-    await startInterview()
+    startInterview()
   }
 })
 </script>
 
 <template>
   <div class="interview-page">
-    <div class="interview-header">
-      <div>
-        <div class="title">
-          AI 模拟面试
+
+    <a-spin :spinning="loading">
+
+      <div class="interview-header">
+        <div>
+          <h2>AI 模拟面试</h2>
+          <div class="sub-title">
+            根据你的真实简历进行针对性面试
+          </div>
         </div>
 
-        <div class="subtitle">
-          根据你的真实简历进行针对性面试
-        </div>
+        <a-button
+          @click="router.push('/resume')"
+        >
+          返回简历
+        </a-button>
       </div>
 
-      <a-tag
-        v-if="finished"
-        color="green"
-      >
-        面试结束
-      </a-tag>
 
-      <a-tag
-        v-else
-        color="blue"
-      >
-        面试进行中
-      </a-tag>
-    </div>
+      <a-row :gutter="20">
 
-    <div class="interview-content">
-      <div class="chat-panel">
-        <div class="message-list">
-          <div
-            v-for="item in messages"
-            :key="item.id"
-            class="message-item"
-            :class="item.role"
-          >
-            <div class="message-role">
-              {{
-                item.role === 'interviewer'
-                  ? 'AI 面试官'
-                  : '我'
-              }}
-            </div>
-
-            <div class="message-content">
-              {{ item.content }}
-            </div>
-
-            <div
-              v-if="
-                item.role === 'interviewer' &&
-                item.score !== null
-              "
-              class="feedback"
-            >
-              <div class="score">
-                本题得分：{{ item.score }}
-              </div>
-
-              <div>
-                {{ item.feedback }}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div
-          v-if="!finished"
-          class="answer-panel"
-        >
-          <a-textarea
-            v-model:value="answer"
-            :rows="6"
-            placeholder="请输入你的回答..."
-            :disabled="answering"
-            @keydown.ctrl.enter="submitAnswer"
-          />
-
-          <div class="answer-footer">
-            <span>
-              Ctrl + Enter 提交
-            </span>
-
-            <a-button
-              type="primary"
-              :loading="answering"
-              @click="submitAnswer"
-            >
-              提交回答
-            </a-button>
-          </div>
-        </div>
-
-        <div
-          v-else-if="report"
-          class="report-panel"
-        >
-          <div class="report-header">
-            <div>
-              <div class="report-title">
-                AI 面试评估报告
-              </div>
-
-              <div class="report-subtitle">
-                基于你的简历、面试表现和知识库生成
-              </div>
-            </div>
-
-            <div class="overall-score">
-              {{ report.overall_score }}
-              <span>分</span>
-            </div>
-          </div>
-
-          <a-row :gutter="16">
-            <a-col :span="6">
-              <a-card>
-                <a-statistic
-                  title="项目能力"
-                  :value="report.project_ability"
-                />
-              </a-card>
-            </a-col>
-
-            <a-col :span="6">
-              <a-card>
-                <a-statistic
-                  title="技术能力"
-                  :value="report.technical_ability"
-                />
-              </a-card>
-            </a-col>
-
-            <a-col :span="6">
-              <a-card>
-                <a-statistic
-                  title="实践能力"
-                  :value="report.practical_ability"
-                />
-              </a-card>
-            </a-col>
-
-            <a-col :span="6">
-              <a-card>
-                <a-statistic
-                  title="表达能力"
-                  :value="report.communication_ability"
-                />
-              </a-card>
-            </a-col>
-          </a-row>
+        <!-- 左侧面试信息 -->
+        <a-col :xs="24" :lg="7">
 
           <a-card
-            title="表现较好的地方"
-            class="report-card"
+            title="面试信息"
+            :bordered="false"
           >
-            <ul>
-              <li
-                v-for="item in report.strengths"
-                :key="item"
-              >
-                {{ item }}
-              </li>
-            </ul>
+
+            <a-descriptions
+              :column="1"
+              size="small"
+            >
+              <a-descriptions-item label="状态">
+                <a-tag
+                  :color="
+                    finished
+                      ? 'green'
+                      : 'blue'
+                  "
+                >
+                  {{
+                    finished
+                      ? '已结束'
+                      : '进行中'
+                  }}
+                </a-tag>
+              </a-descriptions-item>
+
+              <a-descriptions-item label="题目">
+                最多 5 题
+              </a-descriptions-item>
+
+            </a-descriptions>
+
           </a-card>
 
-          <a-card
-            title="需要提升的地方"
-            class="report-card"
-          >
-            <ul>
-              <li
-                v-for="item in report.weaknesses"
-                :key="item"
-              >
-                {{ item }}
-              </li>
-            </ul>
-          </a-card>
 
           <a-card
-            title="知识薄弱点"
-            class="report-card"
+            v-if="knowledgeGap.length"
+            title="本题薄弱知识点"
+            :bordered="false"
+            class="side-card"
           >
-            <div class="tag-list">
+            <a-space wrap>
               <a-tag
-                v-for="item in report.knowledge_gaps"
+                v-for="item in knowledgeGap"
                 :key="item"
+                color="orange"
               >
                 {{ item }}
               </a-tag>
-            </div>
+            </a-space>
           </a-card>
 
+        </a-col>
+
+
+        <!-- 右侧面试区域 -->
+        <a-col :xs="24" :lg="17">
+
           <a-card
-            title="学习建议"
-            class="report-card"
+            :bordered="false"
+            class="interview-card"
           >
-            <ul>
-              <li
-                v-for="item in report.suggestions"
-                :key="item"
+
+            <!-- 当前问题 -->
+            <div class="question-section">
+
+              <div class="section-title">
+                AI 面试官
+              </div>
+
+              <div class="question">
+                {{ question }}
+              </div>
+
+            </div>
+
+
+            <!-- 回答 -->
+            <div
+              v-if="!finished"
+              class="answer-section"
+            >
+
+              <a-textarea
+                v-model:value="answer"
+                :rows="7"
+                placeholder="请输入你的回答..."
+                :disabled="submitting"
+              />
+
+              <div class="submit-area">
+
+                <a-button
+                  type="primary"
+                  :loading="submitting"
+                  @click="submitAnswer"
+                >
+                  提交回答
+                </a-button>
+
+              </div>
+
+            </div>
+
+
+            <!-- 本题结果 -->
+            <div
+              v-if="currentScore !== null"
+              class="result-section"
+            >
+
+              <a-divider />
+
+              <a-statistic
+                title="本题得分"
+                :value="currentScore"
+                suffix="/ 100"
+              />
+
+              <a-card
+                size="small"
+                title="AI 反馈"
+                class="feedback-card"
               >
-                {{ item }}
-              </li>
-            </ul>
+                {{ currentFeedback }}
+              </a-card>
+
+
+              <a-button
+                v-if="referenceAnswer"
+                type="link"
+                @click="
+                  showReferenceAnswer =
+                    !showReferenceAnswer
+                "
+              >
+                {{
+                  showReferenceAnswer
+                    ? '隐藏参考答案'
+                    : '查看参考答案'
+                }}
+              </a-button>
+
+
+              <a-card
+                v-if="showReferenceAnswer"
+                size="small"
+                title="参考答案"
+                class="reference-card"
+              >
+                {{ referenceAnswer }}
+              </a-card>
+
+            </div>
+
+
+            <!-- 面试报告 -->
+            <div
+              v-if="finished && report"
+              class="report-section"
+            >
+
+              <a-divider />
+
+              <h3>
+                面试结束
+              </h3>
+
+              <a-row :gutter="12">
+
+                <a-col
+                  :span="12"
+                  :md="6"
+                >
+                  <a-statistic
+                    title="综合得分"
+                    :value="
+                      report.overall_score
+                    "
+                  />
+                </a-col>
+
+                <a-col
+                  :span="12"
+                  :md="6"
+                >
+                  <a-statistic
+                    title="项目能力"
+                    :value="
+                      report.project_ability
+                    "
+                  />
+                </a-col>
+
+                <a-col
+                  :span="12"
+                  :md="6"
+                >
+                  <a-statistic
+                    title="技术能力"
+                    :value="
+                      report.technical_ability
+                    "
+                  />
+                </a-col>
+
+                <a-col
+                  :span="12"
+                  :md="6"
+                >
+                  <a-statistic
+                    title="实践能力"
+                    :value="
+                      report.practical_ability
+                    "
+                  />
+                </a-col>
+
+              </a-row>
+
+
+              <a-divider />
+
+              <a-card
+                title="优势"
+                size="small"
+              >
+                <ul>
+                  <li
+                    v-for="item in report.strengths"
+                    :key="item"
+                  >
+                    {{ item }}
+                  </li>
+                </ul>
+              </a-card>
+
+
+              <a-card
+                title="不足"
+                size="small"
+                class="report-card"
+              >
+                <ul>
+                  <li
+                    v-for="item in report.weaknesses"
+                    :key="item"
+                  >
+                    {{ item }}
+                  </li>
+                </ul>
+              </a-card>
+
+
+              <a-card
+                title="知识薄弱点"
+                size="small"
+                class="report-card"
+              >
+                <a-space wrap>
+                  <a-tag
+                    v-for="item in report.knowledge_gaps"
+                    :key="item"
+                    color="orange"
+                  >
+                    {{ item }}
+                  </a-tag>
+                </a-space>
+              </a-card>
+
+
+              <a-card
+                title="学习建议"
+                size="small"
+                class="report-card"
+              >
+                <ul>
+                  <li
+                    v-for="item in report.suggestions"
+                    :key="item"
+                  >
+                    {{ item }}
+                  </li>
+                </ul>
+              </a-card>
+
+            </div>
+
           </a-card>
-        </div>
-      </div>
-    </div>
+
+        </a-col>
+
+      </a-row>
+
+    </a-spin>
+
   </div>
 </template>
 
 <style scoped>
 .interview-page {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
+  min-height: 100%;
+  padding: 24px;
   background: #f5f5f5;
 }
 
 .interview-header {
-  height: 72px;
-  flex-shrink: 0;
-  padding: 0 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #fff;
-  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 20px;
 }
 
-.title {
-  font-size: 18px;
-  font-weight: 600;
+.interview-header h2 {
+  margin: 0;
 }
 
-.subtitle {
+.sub-title {
   margin-top: 4px;
   color: #999;
   font-size: 13px;
 }
 
-.interview-content {
-  flex: 1;
-  min-height: 0;
-  padding: 24px;
-  overflow: hidden;
+.interview-card {
+  min-height: 500px;
 }
 
-.chat-panel {
-  height: 100%;
-  max-width: 1000px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  background: #fff;
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.message-list {
-  flex: 1;
-  min-height: 0;
-  padding: 24px;
-  overflow-y: auto;
-}
-
-.message-item {
-  max-width: 80%;
-  margin-bottom: 24px;
-}
-
-.message-item.interviewer {
-  margin-right: auto;
-}
-
-.message-item.candidate {
-  margin-left: auto;
-}
-
-.message-role {
-  margin-bottom: 6px;
-  color: #999;
-  font-size: 12px;
-}
-
-.message-content {
-  padding: 12px 16px;
-  line-height: 1.7;
-  border-radius: 8px;
-  white-space: pre-wrap;
-}
-
-.interviewer .message-content {
-  background: #f5f5f5;
-}
-
-.candidate .message-content {
-  background: #e6f4ff;
-}
-
-.feedback {
-  margin-top: 10px;
-  padding: 12px;
-  background: #fffbe6;
-  border: 1px solid #ffe58f;
-  border-radius: 8px;
-  line-height: 1.6;
-}
-
-.score {
-  margin-bottom: 4px;
-  font-weight: 600;
-}
-
-.answer-panel {
-  padding: 16px;
-  border-top: 1px solid #f0f0f0;
-}
-
-.answer-footer {
-  margin-top: 12px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  color: #999;
-  font-size: 12px;
-}
-
-.report-panel {
-  padding: 24px;
-  overflow-y: auto;
-}
-
-.report-header {
-  margin-bottom: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.report-title {
-  font-size: 20px;
-  font-weight: 600;
-}
-
-.report-subtitle {
-  margin-top: 6px;
-  color: #999;
-  font-size: 13px;
-}
-
-.overall-score {
-  font-size: 42px;
-  font-weight: 700;
-}
-
-.overall-score span {
-  margin-left: 4px;
-  font-size: 14px;
-  font-weight: 400;
-}
-
-.report-card {
+.side-card {
   margin-top: 16px;
 }
 
-.report-card ul {
-  margin: 0;
-  padding-left: 20px;
+.question-section {
+  padding: 8px 0 20px;
 }
 
-.report-card li {
-  margin-bottom: 8px;
-  line-height: 1.6;
+.section-title {
+  margin-bottom: 12px;
+  color: #666;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.question {
+  padding: 18px;
+  border-radius: 8px;
+  background: #f7f7f7;
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+.answer-section {
+  margin-top: 20px;
+}
+
+.submit-area {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.result-section {
+  margin-top: 20px;
+}
+
+.feedback-card {
+  margin-top: 20px;
+}
+
+.reference-card {
+  margin-top: 8px;
+  background: #fafafa;
+}
+
+.report-section {
+  margin-top: 20px;
+}
+
+.report-card {
+  margin-top: 12px;
+}
+
+@media (max-width: 768px) {
+  .interview-page {
+    padding: 12px;
+  }
+
+  .interview-header {
+    align-items: flex-start;
+  }
+
+  .question {
+    font-size: 15px;
+  }
 }
 </style>
