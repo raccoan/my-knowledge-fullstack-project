@@ -70,7 +70,7 @@ export async function createInterview(
       resume_id: resumeId
     },
     {
-      timeout: 120000,
+      timeout: 150000,
     }
     
   )
