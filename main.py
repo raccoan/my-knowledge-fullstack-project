@@ -32,6 +32,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/")
+def root():
+    return {
+        "message": "FastAPI is running"
+    }
 app.include_router(users.router)
 app.include_router(files.router)
 app.include_router(chat.router)

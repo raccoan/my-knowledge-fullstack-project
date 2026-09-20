@@ -20,6 +20,8 @@ class File(Base):
         String(255)
     )
 
+    file_size = Column(Integer, nullable=True)
+
     user_id = Column(
         Integer
     )

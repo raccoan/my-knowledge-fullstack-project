@@ -56,8 +56,57 @@ def create_interview(
             detail="该简历还没有完成结构化解析"
         )
 
+    # ============================================================
+    # 获取历史薄弱知识点
+    # ============================================================
+
+    interviews = (
+        db.query(Interview)
+        .filter(
+            Interview.user_id == user_id
+        )
+        .all()
+    )
+
+    interview_ids = [
+        item.id
+        for item in interviews
+    ]
+
+    weak_points = []
+
+    if interview_ids:
+
+        previous_messages = (
+            db.query(InterviewMessage)
+            .filter(
+                InterviewMessage.interview_id.in_(
+                    interview_ids
+                ),
+                InterviewMessage.role == "candidate"
+            )
+            .all()
+        )
+
+        for message in previous_messages:
+
+            if not message.knowledge_gap:
+                continue
+
+            for gap in message.knowledge_gap:
+
+                if gap and gap not in weak_points:
+                    weak_points.append(gap)
+
+    # ============================================================
+    # 第一题使用“项目深挖”
+    # ============================================================
+
     question = generate_interview_question(
-        resume.structured_data
+        resume_data=resume.structured_data,
+        weak_points=weak_points,
+        question_type="项目深挖",
+        previous_questions=[]
     )
 
     interview = Interview(
@@ -185,10 +234,7 @@ def answer_interview(
         "knowledge_gap",
         []
     )
-    next_question = result.get(
-        "next_question",
-        ""
-    )
+    next_question = ""
 
     # 保存本次回答的评价信息
     candidate_message.score = score
@@ -276,7 +322,107 @@ def answer_interview(
             "report": report
         }
 
-    # 还没结束，继续下一题
+    # ============================================================
+    # 生成下一道面试题
+    # ============================================================
+
+    question_types = [
+        "项目深挖",
+        "技术原理",
+        "项目结合技术原理",
+        "实际场景",
+        "薄弱知识点强化"
+    ]
+
+    # question_count 从 1 开始
+    # 第一次回答完成后，下一题就是第 2 题
+    next_question_index = question_count
+
+    if next_question_index >= len(question_types):
+        next_question_index = len(question_types) - 1
+
+    question_type = question_types[
+        next_question_index
+    ]
+
+    # ============================================================
+    # 获取已经问过的问题
+    # ============================================================
+
+    previous_interviewer_messages = (
+        db.query(InterviewMessage)
+        .filter(
+            InterviewMessage.interview_id == interview.id,
+            InterviewMessage.role == "interviewer"
+        )
+        .order_by(
+            InterviewMessage.created_at.asc()
+        )
+        .all()
+    )
+
+    previous_questions = [
+        message.content
+        for message in previous_interviewer_messages
+    ]
+
+    # ============================================================
+    # 获取历史薄弱知识点
+    # ============================================================
+
+    interviews = (
+        db.query(Interview)
+        .filter(
+            Interview.user_id == user_id
+        )
+        .all()
+    )
+
+    interview_ids = [
+        item.id
+        for item in interviews
+    ]
+
+    weak_points = []
+
+    if interview_ids:
+
+        previous_messages = (
+            db.query(InterviewMessage)
+            .filter(
+                InterviewMessage.interview_id.in_(
+                    interview_ids
+                ),
+                InterviewMessage.role == "candidate"
+            )
+            .all()
+        )
+
+        for message in previous_messages:
+
+            if not message.knowledge_gap:
+                continue
+
+            for gap in message.knowledge_gap:
+
+                if gap and gap not in weak_points:
+                    weak_points.append(gap)
+
+    # ============================================================
+    # 生成下一题
+    # ============================================================
+
+    next_question = generate_interview_question(
+        resume_data=resume.structured_data,
+        weak_points=weak_points,
+        question_type=question_type,
+        previous_questions=previous_questions
+    )
+
+    # ============================================================
+    # 保存下一道题
+    # ============================================================
+
     interview.current_question = next_question
 
     next_message = InterviewMessage(
@@ -347,7 +493,8 @@ def get_interview(
                 "score": item.score,
                 "feedback": item.feedback,
                 "reference_answer": item.reference_answer,
-                "created_at": item.created_at
+                "created_at": item.created_at,
+                "knowledge_gap":item.knowledge_gap,
             }
             for item in messages
         ]
@@ -419,4 +566,64 @@ def get_interviews(
         }
         for interview in interviews
     ]
+
+@router.get("/interviews/weak-points")
+def get_weak_points(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    user_id = current_user["id"]
+
+    # 1. 获取当前用户的所有面试
+    interviews = (
+        db.query(Interview)
+        .filter(
+            Interview.user_id == user_id
+        )
+        .all()
+    )
+
+    # 2. 获取这些面试的 ID
+    interview_ids = [
+        interview.id
+        for interview in interviews
+    ]
+
+    # 3. 如果用户还没有进行过面试
+    if not interview_ids:
+        return {
+            "knowledge_gaps": []
+        }
+
+    # 4. 获取这些面试中的所有候选人回答
+    messages = (
+        db.query(InterviewMessage)
+        .filter(
+            InterviewMessage.interview_id.in_(
+                interview_ids
+            ),
+            InterviewMessage.role == "candidate"
+        )
+        .all()
+    )
+
+    # 5. 收集所有薄弱知识点
+    knowledge_gaps = []
+
+    for message in messages:
+
+        # 当前回答没有薄弱知识点
+        if not message.knowledge_gap:
+            continue
+
+        for gap in message.knowledge_gap:
+
+            # 避免重复
+            if gap and gap not in knowledge_gaps:
+                knowledge_gaps.append(gap)
+
+    return {
+        "knowledge_gaps": knowledge_gaps
+    }
+
 

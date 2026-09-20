@@ -135,28 +135,194 @@ JSON 格式：
 
 
 
-def generate_interview_question(resume_data):
+def generate_interview_question(
+    resume_data,
+    weak_points=None,
+    question_type="项目深挖",
+    previous_questions=None
+):
+    weak_points = weak_points or []
+    previous_questions = previous_questions or []
+
+    # 历史薄弱知识点
+    if weak_points:
+        weak_point_context = "\n".join(
+            f"- {item}"
+            for item in weak_points
+        )
+    else:
+        weak_point_context = "暂无历史薄弱知识点"
+
+    # 已经问过的问题
+    if previous_questions:
+        previous_question_context = "\n".join(
+            f"- {item}"
+            for item in previous_questions
+        )
+    else:
+        previous_question_context = "暂无"
+
+    # 不同题型的强约束
+    question_type_instruction = {
+        "项目深挖": """
+本题必须是项目深挖题。
+
+重点考察：
+- 项目具体实现
+- 技术选型
+- 架构设计
+- 开发过程中遇到的问题
+- 如何解决问题
+- 为什么这样设计
+
+不要直接考察纯八股。
+不要重复已经问过的问题。
+""",
+
+        "技术原理": """
+本题必须是技术原理/八股题。
+
+必须考察候选人简历中出现的某项技术背后的原理。
+
+例如：
+- Vue3 响应式原理
+- React Hooks 原理
+- JavaScript 事件循环
+- TypeScript 类型系统
+- Fetch / SSE / HTTP
+- FastAPI 依赖注入
+- MySQL 索引
+- RAG 检索原理
+
+重点是“为什么”和“底层怎么工作”。
+
+不要让问题只是简单询问项目实现。
+""",
+
+        "项目结合技术原理": """
+本题必须同时结合“候选人的真实项目”和“技术原理”。
+
+问题应该形成：
+
+项目经历
++
+项目中的具体技术
++
+该技术背后的原理
+
+例如：
+
+“你在 AI 对话平台中使用了 SSE 实现流式输出，请解释 SSE 的工作机制，以及为什么这里适合使用 SSE？”
+
+不能只问项目，也不能只问八股。
+""",
+
+        "实际场景": """
+本题必须是实际开发场景题。
+
+给候选人一个真实的软件开发问题，
+让候选人分析原因并提出解决方案。
+
+例如：
+- 接口响应缓慢怎么办？
+- 大文件上传怎么办？
+- SSE连接断开怎么办？
+- RAG检索结果不准确怎么办？
+- 前端出现内存泄漏怎么办？
+- 数据库查询越来越慢怎么办？
+
+重点考察：
+问题分析能力
++
+技术方案设计能力
+
+不要直接问定义类八股。
+""",
+
+        "薄弱知识点强化": """
+本题必须针对候选人历史面试中出现的薄弱知识点。
+
+必须从“历史薄弱知识点”中选择一个进行考察。
+
+优先选择：
+- 出现次数较多的知识点
+- 与候选人简历技术栈相关的知识点
+
+问题应该比之前的问题更加深入。
+
+不能继续随机询问其他项目知识。
+
+如果历史薄弱知识点为空，
+则选择候选人简历中最核心的技术原理进行考察。
+"""
+    }
+
+    instruction = question_type_instruction.get(
+        question_type,
+        question_type_instruction["项目深挖"]
+    )
+
     prompt = f"""
-你是一名专业的前端技术面试官。
+你是一名专业的技术面试官。
 
-现在你正在对候选人进行一场真实的技术面试。
+现在正在进行一场真实的技术面试。
 
-候选人的结构化简历如下：
+请根据候选人的真实简历生成下一道面试问题。
 
-{json.dumps(resume_data, ensure_ascii=False, indent=2)}
+━━━━━━━━━━━━━━━━━━
+【候选人简历】
+━━━━━━━━━━━━━━━━━━
 
-请根据候选人的真实简历生成第一道面试题。
+{json.dumps(
+    resume_data,
+    ensure_ascii=False,
+    indent=2
+)}
 
-要求：
+━━━━━━━━━━━━━━━━━━
+【历史薄弱知识点】
+━━━━━━━━━━━━━━━━━━
 
-1. 必须结合候选人的真实项目经历
-2. 优先询问项目中的技术实现细节
-3. 不要问简历中完全没有出现的项目
-4. 不要只问简单的八股题
-5. 问题应该能够判断候选人是否真正做过这个项目
-6. 如果有多个项目，优先选择技术含量最高的项目
-7. 只返回面试问题本身
-8. 不要添加“问题：”等前缀
+{weak_point_context}
+
+━━━━━━━━━━━━━━━━━━
+【已经问过的问题】
+━━━━━━━━━━━━━━━━━━
+
+{previous_question_context}
+
+━━━━━━━━━━━━━━━━━━
+【当前题型】
+━━━━━━━━━━━━━━━━━━
+
+{question_type}
+
+━━━━━━━━━━━━━━━━━━
+【本题必须遵守的题型要求】
+━━━━━━━━━━━━━━━━━━
+
+{instruction}
+
+━━━━━━━━━━━━━━━━━━
+【通用要求】
+━━━━━━━━━━━━━━━━━━
+
+1. 必须基于候选人的真实简历。
+2. 不允许编造候选人没有经历过的项目。
+3. 不允许编造候选人没有使用过的技术。
+4. 必须严格遵守当前题型。
+5. 不能与已经问过的问题重复。
+6. 即使技术相同，也必须更换考察角度。
+7. 问题应该符合真实技术面试场景。
+8. 问题应该具有一定深度。
+9. 不要一次提出很多完全无关的问题。
+10. 只生成一道面试问题。
+11. 不要返回答案。
+12. 不要返回 JSON。
+13. 不要使用 Markdown。
+14. 不要添加“问题：”等前缀。
+
+请直接输出面试问题。
 """
 
     response = client.chat.completions.create(
@@ -167,7 +333,7 @@ def generate_interview_question(resume_data):
                 "content": prompt
             }
         ],
-        temperature=0.7
+        temperature=0.8
     )
 
     return response.choices[0].message.content.strip()

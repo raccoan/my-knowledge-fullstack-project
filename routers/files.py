@@ -1,177 +1,272 @@
-from fastapi import (
-    APIRouter,
-    UploadFile,
-    File,
-    Depends,
-    HTTPException
-)
+import os
+import shutil
+from datetime import datetime
+
+from fastapi import APIRouter, Depends, UploadFile, File as FastAPIFile, HTTPException
 from sqlalchemy.orm import Session
+
 from database import get_db
-from models.file import File as FileModel
-from utils.auth import get_current_user
-from utils.pdf import extract_pdf_text
+from models.file import File
 from models.document import Document
 from models.chunk import Chunk
+
+from utils.auth import get_current_user
+from utils.pdf import extract_pdf_text
 from utils.splitter import split_text
 from utils.embedding import get_embedding
-from utils.vector import add_vector,delete_vectors_by_document
-from models.user import User
+from utils.vector import add_vector, delete_vectors_by_document
 
-import os
-
+from schemas.file import KnowledgeFileResponse
 
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/files",
+    tags=["files"]
+)
 
 UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# 上传文件
-@router.post("/files/upload")
+
+@router.post("/upload")
 def upload_file(
-        file: UploadFile = File(...),
-        db: Session = Depends(get_db),
-        current_user: User = Depends(get_current_user)
+    file: UploadFile = FastAPIFile(...),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
 ):
-    if file.content_type != "application/pdf":
+    user_id = current_user["id"]
+
+    if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(
             status_code=400,
-            detail="目前只支持PDF文件"
+            detail="目前只支持 PDF 文件"
         )
 
-    os.makedirs(
+    safe_filename = file.filename
+
+    file_path = os.path.join(
         UPLOAD_DIR,
-        exist_ok=True
+        f"{user_id}_{safe_filename}"
     )
 
-    file_path = f"{UPLOAD_DIR}/{file.filename}"
+    document = None
+    db_file = None
 
-    with open(
-        file_path,
-        "wb"
-    ) as f:
-        f.write(
-            file.file.read()
+    try:
+        # =========================
+        # 1. 保存 PDF 文件
+        # =========================
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        file_size = os.path.getsize(file_path)
+
+        # =========================
+        # 2. 创建 files 记录
+        # =========================
+        db_file = File(
+            user_id=user_id,
+            filename=safe_filename,
+            file_path=file_path,
+            file_size=file_size,
+            created_time=datetime.now()
         )
 
-    db_file = FileModel(
-        filename=file.filename,
-        file_path=file_path,
-        user_id=current_user["id"]
-    )
+        db.add(db_file)
+        db.commit()
+        db.refresh(db_file)
 
-    db.add(db_file)
-    db.commit()
-    db.refresh(db_file)
+        # =========================
+        # 3. 解析 PDF 文本
+        # =========================
+        text = extract_pdf_text(file_path)
 
-    text = extract_pdf_text(file_path)
+        if not text.strip():
+            raise Exception("PDF 中没有读取到有效文本")
 
-    document = Document(
-        file_id=db_file.id,
-        content=text
-    )
-
-    db.add(document)
-    db.commit()
-    db.refresh(document)
-
-    chunks = split_text(text)
-
-    for chunk in chunks:
-        db_chunk = Chunk(
-            document_id=document.id,
-            content=chunk
+        # =========================
+        # 4. 创建 documents 记录
+        # =========================
+        document = Document(
+            user_id=user_id,
+            file_id=db_file.id,
+            content=text,
+            created_time=datetime.now(),
+            status="processing",
+            chunk_count=0
         )
 
-        db.add(db_chunk)
-        db.flush()
+        db.add(document)
+        db.commit()
+        db.refresh(document)
 
-        embedding = get_embedding(chunk)
+        # =========================
+        # 5. 文本切分
+        # =========================
+        chunks = split_text(text)
 
-        add_vector(
-            db_chunk.id,
-            chunk,
-            embedding,
-            current_user["id"],
-            document.id
-        )
+        # =========================
+        # 6. 保存 chunk + 生成向量
+        # =========================
+        for index, chunk_text in enumerate(chunks):
 
-    db.commit()
+            chunk = Chunk(
+                document_id=document.id,
+                content=chunk_text,
+                chunk_index=index
+            )
 
-    return {
-        "message": "上传成功",
-        "file": {
-            "id": db_file.id,
-            "filename": db_file.filename,
-            "filepath": db_file.file_path
+            db.add(chunk)
+            db.commit()
+            db.refresh(chunk)
+
+            embedding = get_embedding(chunk_text)
+
+            add_vector(
+                chunk_id=chunk.id,
+                content=chunk_text,
+                embedding=embedding,
+                user_id=user_id,
+                document_id=document.id
+            )
+
+        # =========================
+        # 7. 更新文档状态
+        # =========================
+        document.status = "completed"
+        document.chunk_count = len(chunks)
+
+        db.add(document)
+        db.commit()
+
+        return {
+            "message": "文件上传成功",
+            "file_id": db_file.id,
+            "document_id": document.id,
+            "filename": safe_filename,
+            "chunk_count": len(chunks),
+            "status": "completed"
         }
-    }
+
+    except Exception as e:
+        db.rollback()
+
+        # 如果已经创建了 document，尝试标记失败
+        try:
+            if document and document.id:
+                document.status = "failed"
+                db.add(document)
+                db.commit()
+        except Exception:
+            db.rollback()
+
+        # 删除本地文件
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"文件处理失败：{str(e)}"
+        )
 
 
-# 获取用户文件列表
-@router.get("/files")
+@router.get("", response_model=list[KnowledgeFileResponse])
 def get_files(
-        db: Session = Depends(get_db),
-        current_user=Depends(get_current_user)
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
 ):
-    files = db.query(FileModel).filter(
-        FileModel.user_id == current_user["id"]
-    ).all()
+    user_id = current_user["id"]
 
-    return files
+    documents = (
+        db.query(Document)
+        .filter(Document.user_id == user_id)
+        .order_by(Document.created_time.desc())
+        .all()
+    )
+
+    result = []
+
+    for document in documents:
+
+        file = (
+            db.query(File)
+            .filter(
+                File.id == document.file_id,
+                File.user_id == user_id
+            )
+            .first()
+        )
+
+        result.append({
+            "id": document.id,
+            "file_id": document.file_id,
+            "filename": file.filename if file else "",
+            "status": document.status,
+            "chunk_count": document.chunk_count,
+            "file_size": file.file_size if file else None,
+            "created_at": document.created_time
+        })
+
+    return result
 
 
-# 删除接口
-@router.delete("/files/{file_id}")
+@router.delete("/{document_id}")
 def delete_file(
-        file_id: int,
-        db: Session = Depends(get_db),
-        current_user=Depends(get_current_user)
+    document_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
 ):
-    user_id=current_user["id"]
-    file = db.query(FileModel).filter(
-        FileModel.id == file_id,
-        FileModel.user_id == user_id
-    ).first()
+    user_id = current_user["id"]
 
-    if not file:
+    document = (
+        db.query(Document)
+        .filter(
+            Document.id == document_id,
+            Document.user_id == user_id
+        )
+        .first()
+    )
+
+    if not document:
         raise HTTPException(
             status_code=404,
-            detail="文件不存在"
+            detail="文档不存在"
         )
 
-    file_path = file.file_path
+    file = (
+        db.query(File)
+        .filter(
+            File.id == document.file_id,
+            File.user_id == user_id
+        )
+        .first()
+    )
 
-    document = db.query(Document).filter(
-        Document.file_id == file.id
-    ).first()
-
-    if document:
-        # 删除chroma向量
+    try:
         delete_vectors_by_document(
-            document.id,
-            user_id
+            document_id=document.id,
+            user_id=user_id
         )
+    except Exception as e:
+        print(f"删除 Chroma 向量失败：{e}")
 
-        # 删除Chunk
-        db.query(Chunk).filter(
-            Chunk.document_id == document.id
-        ).delete(
-            synchronize_session=False
-        )
+    (
+        db.query(Chunk)
+        .filter(Chunk.document_id == document.id)
+        .delete(synchronize_session=False)
+    )
 
-        # 删除document
-        db.delete(document)
+    db.delete(document)
 
-    # 删除file
-    db.delete(file)
+    if file:
+        db.delete(file)
 
     db.commit()
 
-
-    # 删除本地磁盘pdf
-    if file_path and os.path.exists(file_path):
-        os.remove(file_path)
+    if file and file.file_path:
+        if os.path.exists(file.file_path):
+            os.remove(file.file_path)
 
     return {
-        "message": "删除成功"
+        "message": "文档删除成功"
     }

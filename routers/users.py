@@ -64,7 +64,9 @@ def login(
         db_user.password
     ):
         return {"message":"密码错误"}
+    print("数据库查询到的用户:", db_user.id, db_user.username)
 
+    # print("登录用户:", user.id, user.username)
     token = create_token({
         "id":db_user.id,
         "username":db_user.username

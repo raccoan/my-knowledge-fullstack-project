@@ -1,24 +1,46 @@
-from sqlalchemy import Column,Integer,String,Text,DateTime
-from datetime import  datetime
+from sqlalchemy import Column, Integer, Text, DateTime, String
 from database import Base
 
+
 class Document(Base):
-    __tablename__ = "document"
+    __tablename__ = "documents"
 
     id = Column(
         Integer,
-        primary_key=True
+        primary_key=True,
+        index=True
+    )
+
+    user_id = Column(
+        Integer,
+        nullable=False,
+        index=True
     )
 
     file_id = Column(
-        Integer
+        Integer,
+        nullable=True,
+        index=True
     )
 
     content = Column(
-      Text
+        Text,
+        nullable=True
     )
 
     created_time = Column(
         DateTime,
-        default=datetime.now
+        nullable=False
+    )
+
+    status = Column(
+        String(20),
+        nullable=False,
+        default="processing"
+    )
+
+    chunk_count = Column(
+        Integer,
+        nullable=False,
+        default=0
     )
