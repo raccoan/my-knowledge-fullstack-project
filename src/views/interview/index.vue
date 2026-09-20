@@ -1,3 +1,4 @@
+
 <template>
   <div class="interview-page">
     <!-- 顶部 -->
@@ -12,6 +13,7 @@
 
         <div class="header-title">
           <div class="title">AI 模拟面试</div>
+
           <div class="subtitle">
             基于你的真实简历进行针对性技术面试
           </div>
@@ -49,21 +51,30 @@
               class="info-card"
             >
               <div class="info-item">
-                <span class="label">面试 ID</span>
+                <span class="label">
+                  面试 ID
+                </span>
+
                 <span class="value">
                   {{ interviewId || '-' }}
                 </span>
               </div>
 
               <div class="info-item">
-                <span class="label">题目数量</span>
+                <span class="label">
+                  题目数量
+                </span>
+
                 <span class="value">
                   {{ questionCount }}
                 </span>
               </div>
 
               <div class="info-item">
-                <span class="label">当前状态</span>
+                <span class="label">
+                  当前状态
+                </span>
+
                 <span class="value">
                   <a-tag
                     v-if="!finished"
@@ -81,6 +92,7 @@
                 </span>
               </div>
 
+              <!-- 综合得分 -->
               <div
                 v-if="finished && report"
                 class="info-score"
@@ -109,6 +121,7 @@
               <div class="ability-item">
                 <div class="ability-header">
                   <span>项目能力</span>
+
                   <span>
                     {{ report.project_ability }}
                   </span>
@@ -123,6 +136,7 @@
               <div class="ability-item">
                 <div class="ability-header">
                   <span>技术能力</span>
+
                   <span>
                     {{ report.technical_ability }}
                   </span>
@@ -137,6 +151,7 @@
               <div class="ability-item">
                 <div class="ability-header">
                   <span>实践能力</span>
+
                   <span>
                     {{ report.practical_ability }}
                   </span>
@@ -151,6 +166,7 @@
               <div class="ability-item">
                 <div class="ability-header">
                   <span>沟通表达</span>
+
                   <span>
                     {{ report.communication_ability }}
                   </span>
@@ -162,7 +178,6 @@
                 />
               </div>
             </a-card>
-
           </div>
         </a-col>
 
@@ -170,69 +185,77 @@
         <a-col :xs="24" :lg="17">
           <div class="right-column">
 
-            <!-- 面试记录 -->
+            <!-- 面试过程 -->
             <a-card
               title="面试过程"
               :bordered="false"
               class="conversation-card"
             >
-              <!-- 没有消息 -->
               <a-empty
                 v-if="messages.length === 0"
                 description="暂无面试记录"
               />
 
-              <!-- 消息列表 -->
               <div
                 v-else
                 class="message-list"
               >
                 <div
-                  v-for="(message, index) in messages"
-                  :key="message.id"
+                  v-for="(item, index) in messages"
+                  :key="item.id"
                   class="message-item"
                 >
 
-                  <!-- 面试官问题 -->
+                  <!-- 面试官 -->
                   <div
-                    v-if="message.role === 'interviewer'"
+                    v-if="item.role === 'interviewer'"
                     class="interviewer-message"
                   >
                     <div class="message-role">
-                      <div class="avatar interviewer-avatar">
+                      <div
+                        class="avatar interviewer-avatar"
+                      >
                         AI
                       </div>
 
                       <span>
-                        AI 面试官 · 第 {{ getQuestionNumber(index) }} 题
+                        AI 面试官 · 第
+                        {{ getQuestionNumber(index) }}
+                        题
                       </span>
                     </div>
 
                     <div class="question-content">
-                      {{ message.content }}
+                      {{ item.content }}
                     </div>
                   </div>
 
-                  <!-- 候选人回答 -->
+                  <!-- 候选人 -->
                   <div
-                    v-if="message.role === 'candidate'"
+                    v-else-if="item.role === 'candidate'"
                     class="candidate-message"
                   >
-                    <div class="message-role candidate-role">
-                      <span>我的回答</span>
+                    <div
+                      class="message-role candidate-role"
+                    >
+                      <span>
+                        我的回答
+                      </span>
 
-                      <div class="avatar candidate-avatar">
+                      <div
+                        class="avatar candidate-avatar"
+                      >
                         我
                       </div>
                     </div>
 
                     <div class="answer-content">
-                      {{ message.content }}
+                      {{ item.content }}
                     </div>
 
-                    <!-- 得分 -->
+                    <!-- 评分结果 -->
                     <div
-                      v-if="message.score !== null"
+                      v-if="item.score !== null"
                       class="result-section"
                     >
                       <div class="result-header">
@@ -241,15 +264,17 @@
                         </span>
 
                         <a-tag
-                          :color="getScoreColor(message.score)"
+                          :color="
+                            getScoreColor(item.score)
+                          "
                         >
-                          {{ message.score }} 分
+                          {{ item.score }} 分
                         </a-tag>
                       </div>
 
                       <!-- AI反馈 -->
                       <div
-                        v-if="message.feedback"
+                        v-if="item.feedback"
                         class="feedback-box"
                       >
                         <div class="feedback-title">
@@ -257,13 +282,15 @@
                         </div>
 
                         <div class="feedback-content">
-                          {{ message.feedback }}
+                          {{ item.feedback }}
                         </div>
                       </div>
+
+                      <!-- 薄弱知识点 -->
                       <div
                         v-if="
-                          message.knowledge_gap &&
-                          message.knowledge_gap.length
+                          item.knowledge_gap &&
+                          item.knowledge_gap.length
                         "
                         class="knowledge-gap"
                       >
@@ -273,7 +300,9 @@
 
                         <div class="knowledge-gap-list">
                           <a-tag
-                            v-for="gap in message.knowledge_gap"
+                            v-for="
+                              gap in item.knowledge_gap
+                            "
                             :key="gap"
                             color="orange"
                           >
@@ -281,14 +310,19 @@
                           </a-tag>
                         </div>
                       </div>
+
                       <!-- 参考答案 -->
                       <div
-                        v-if="message.reference_answer"
+                        v-if="item.reference_answer"
                         class="reference-box"
                       >
                         <div
                           class="reference-header"
-                          @click="toggleReferenceAnswer(message.id)"
+                          @click="
+                            toggleReferenceAnswer(
+                              item.id
+                            )
+                          "
                         >
                           <span class="reference-title">
                             参考答案
@@ -296,7 +330,9 @@
 
                           <span class="reference-toggle">
                             {{
-                              showReferenceAnswers[message.id]
+                              showReferenceAnswers[
+                                item.id
+                              ]
                                 ? '收起'
                                 : '查看'
                             }}
@@ -304,25 +340,35 @@
                             <DownOutlined
                               :class="{
                                 'rotate-icon':
-                                  showReferenceAnswers[message.id]
+                                  showReferenceAnswers[
+                                    item.id
+                                  ]
                               }"
                             />
                           </span>
                         </div>
 
                         <div
-                          v-if="showReferenceAnswers[message.id]"
+                          v-if="
+                            showReferenceAnswers[
+                              item.id
+                            ]
+                          "
                           class="reference-content"
                         >
-                          {{ message.reference_answer }}
+                          {{
+                            item.reference_answer
+                          }}
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <!-- 分隔线 -->
                   <a-divider
-                    v-if="index < messages.length - 1"
+                    v-if="
+                      index <
+                      messages.length - 1
+                    "
                     class="message-divider"
                   />
                 </div>
@@ -370,6 +416,7 @@
                   @click="submitAnswer"
                 >
                   提交回答
+
                   <template #icon>
                     <SendOutlined />
                   </template>
@@ -377,20 +424,28 @@
               </div>
             </a-card>
 
-            <!-- 面试结束 -->
+            <!-- 面试报告 -->
             <a-card
               v-if="finished"
               title="面试报告"
               :bordered="false"
               class="report-card"
             >
+              <!-- 报告加载中 -->
+              <a-spin
+                v-if="reportLoading"
+                class="report-loading"
+              />
+
               <!-- 没有报告 -->
               <a-empty
-                v-if="!report"
+                v-else-if="!report"
                 description="暂无面试报告"
               />
 
+              <!-- 报告 -->
               <template v-else>
+
                 <!-- 总分 -->
                 <div class="report-score">
                   <a-statistic
@@ -402,19 +457,111 @@
 
                 <a-divider />
 
+                <!-- 能力维度 -->
+                <div class="report-section">
+                  <div class="report-section-title">
+                    能力分析
+                  </div>
+
+                  <div class="report-ability-list">
+                    <div class="report-ability-item">
+                      <div class="report-ability-header">
+                        <span>
+                          项目能力
+                        </span>
+
+                        <span>
+                          {{ report.project_ability }}
+                        </span>
+                      </div>
+
+                      <a-progress
+                        :percent="
+                          report.project_ability
+                        "
+                        :show-info="false"
+                      />
+                    </div>
+
+                    <div class="report-ability-item">
+                      <div class="report-ability-header">
+                        <span>
+                          技术能力
+                        </span>
+
+                        <span>
+                          {{ report.technical_ability }}
+                        </span>
+                      </div>
+
+                      <a-progress
+                        :percent="
+                          report.technical_ability
+                        "
+                        :show-info="false"
+                      />
+                    </div>
+
+                    <div class="report-ability-item">
+                      <div class="report-ability-header">
+                        <span>
+                          实践能力
+                        </span>
+
+                        <span>
+                          {{ report.practical_ability }}
+                        </span>
+                      </div>
+
+                      <a-progress
+                        :percent="
+                          report.practical_ability
+                        "
+                        :show-info="false"
+                      />
+                    </div>
+
+                    <div class="report-ability-item">
+                      <div class="report-ability-header">
+                        <span>
+                          沟通表达
+                        </span>
+
+                        <span>
+                          {{
+                            report.communication_ability
+                          }}
+                        </span>
+                      </div>
+
+                      <a-progress
+                        :percent="
+                          report.communication_ability
+                        "
+                        :show-info="false"
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <!-- 优势 -->
                 <div class="report-section">
                   <div class="report-section-title">
                     <CheckCircleOutlined />
+
                     优势
                   </div>
 
                   <div
-                    v-if="report.strengths?.length"
+                    v-if="
+                      report.strengths?.length
+                    "
                     class="report-tags"
                   >
                     <a-tag
-                      v-for="item in report.strengths"
+                      v-for="
+                        item in report.strengths
+                      "
                       :key="item"
                       color="success"
                     >
@@ -433,15 +580,20 @@
                 <div class="report-section">
                   <div class="report-section-title">
                     <ExclamationCircleOutlined />
+
                     不足
                   </div>
 
                   <div
-                    v-if="report.weaknesses?.length"
+                    v-if="
+                      report.weaknesses?.length
+                    "
                     class="report-tags"
                   >
                     <a-tag
-                      v-for="item in report.weaknesses"
+                      v-for="
+                        item in report.weaknesses
+                      "
                       :key="item"
                       color="warning"
                     >
@@ -460,15 +612,20 @@
                 <div class="report-section">
                   <div class="report-section-title">
                     <BookOutlined />
+
                     知识薄弱点
                   </div>
 
                   <div
-                    v-if="report.knowledge_gaps?.length"
+                    v-if="
+                      report.knowledge_gaps?.length
+                    "
                     class="report-tags"
                   >
                     <a-tag
-                      v-for="item in report.knowledge_gaps"
+                      v-for="
+                        item in report.knowledge_gaps
+                      "
                       :key="item"
                     >
                       {{ item }}
@@ -486,15 +643,20 @@
                 <div class="report-section">
                   <div class="report-section-title">
                     <BulbOutlined />
+
                     学习建议
                   </div>
 
                   <ul
-                    v-if="report.suggestions?.length"
+                    v-if="
+                      report.suggestions?.length
+                    "
                     class="suggestion-list"
                   >
                     <li
-                      v-for="item in report.suggestions"
+                      v-for="
+                        item in report.suggestions
+                      "
                       :key="item"
                     >
                       {{ item }}
@@ -508,6 +670,7 @@
                   />
                 </div>
 
+                <!-- 操作 -->
                 <div class="report-actions">
                   <a-button
                     type="primary"
@@ -524,7 +687,6 @@
                 </div>
               </template>
             </a-card>
-
           </div>
         </a-col>
       </a-row>
@@ -534,9 +696,9 @@
 
 <script setup lang="ts">
 import {
-  ref,
   computed,
-  onMounted
+  onMounted,
+  ref
 } from 'vue'
 
 import {
@@ -594,7 +756,7 @@ const answer = ref('')
 const messages = ref<InterviewMessage[]>([])
 
 /**
- * 是否正在提交
+ * 是否提交中
  */
 const submitting = ref(false)
 
@@ -609,14 +771,18 @@ const finished = ref(false)
 const report = ref<InterviewReport | null>(null)
 
 /**
- * 每一道题的参考答案是否展开
- *
- * key = candidate message id
+ * 报告加载状态
  */
-const showReferenceAnswers = ref<Record<number, boolean>>({})
+const reportLoading = ref(false)
 
 /**
- * 题目数量
+ * 每道题参考答案是否展开
+ */
+const showReferenceAnswers =
+  ref<Record<number, boolean>>({})
+
+/**
+ * 面试题数量
  */
 const questionCount = computed(() => {
   return messages.value.filter(
@@ -625,7 +791,7 @@ const questionCount = computed(() => {
 })
 
 /**
- * 返回
+ * 返回首页
  */
 const goBack = () => {
   router.push('/chat')
@@ -639,20 +805,17 @@ const goResume = () => {
 }
 
 /**
- * 获取当前问题是第几题
- *
- * 因为 messages 中同时存在：
- * interviewer
- * candidate
- *
- * 所以需要统计当前 index 前面出现了几个 interviewer
+ * 获取题目编号
  */
-const getQuestionNumber = (index: number) => {
+const getQuestionNumber = (
+  index: number
+) => {
   return messages.value
     .slice(0, index + 1)
     .filter(
       item => item.role === 'interviewer'
-    ).length
+    )
+    .length
 }
 
 /**
@@ -661,14 +824,20 @@ const getQuestionNumber = (index: number) => {
 const toggleReferenceAnswer = (
   messageId: number
 ) => {
-  showReferenceAnswers.value[messageId] =
-    !showReferenceAnswers.value[messageId]
+  showReferenceAnswers.value[
+    messageId
+  ] =
+    !showReferenceAnswers.value[
+      messageId
+    ]
 }
 
 /**
- * 根据分数获取 Tag 颜色
+ * 根据分数返回颜色
  */
-const getScoreColor = (score: number) => {
+const getScoreColor = (
+  score: number
+) => {
   if (score >= 90) {
     return 'success'
   }
@@ -685,6 +854,95 @@ const getScoreColor = (score: number) => {
 }
 
 /**
+ * 加载面试详情
+ */
+const loadInterview = async (
+  id: number
+) => {
+  try {
+    submitting.value = true
+
+    const data = await getInterview(id)
+
+    interviewId.value = data.id
+
+    messages.value =
+      data.messages || []
+
+    finished.value =
+      data.status === 'finished'
+
+    /**
+     * 当前问题
+     *
+     * 已结束的面试没有当前问题
+     */
+    question.value =
+      data.current_question || ''
+
+    /**
+     * 如果面试已经结束，
+     * 从后端加载报告
+     */
+    if (finished.value) {
+      await loadInterviewReport()
+    }
+  } catch (error) {
+    console.error(
+      '加载面试失败:',
+      error
+    )
+
+    antMessage.error(
+      '加载面试失败'
+    )
+  } finally {
+    submitting.value = false
+  }
+}
+
+/**
+ * 加载面试报告
+ */
+const loadInterviewReport = async () => {
+  if (!interviewId.value) {
+    return
+  }
+
+  reportLoading.value = true
+
+  try {
+    const data =
+      await getInterviewReport(
+        interviewId.value
+      )
+
+    /**
+     * 后端当前接口直接返回 report JSON
+     *
+     * 为了兼容之前可能存在的：
+     * { report: {...} }
+     *
+     * 这里同时处理两种情况。
+     */
+    report.value =
+      (data as any)?.report ||
+      data
+  } catch (error) {
+    console.error(
+      '获取面试报告失败:',
+      error
+    )
+
+    antMessage.error(
+      '获取面试报告失败'
+    )
+  } finally {
+    reportLoading.value = false
+  }
+}
+
+/**
  * 开始新的面试
  */
 const startInterview = async () => {
@@ -696,51 +954,42 @@ const startInterview = async () => {
     antMessage.error(
       '缺少简历 ID'
     )
+
     return
   }
 
   try {
     submitting.value = true
 
-    const data = await createInterview(
-      resumeId
-    )
+    const data =
+      await createInterview(
+        resumeId
+      )
 
     interviewId.value = data.id
 
-    question.value = data.question
-
-    finished.value = false
-
-    answer.value = ''
-
-    messages.value = [
-      {
-        id: Date.now(),
-        role: 'interviewer',
-        content: data.question,
-        score: null,
-        feedback: null,
-        reference_answer: null,
-        created_at: new Date().toISOString(),
-        knowledge_gap: [],
-      }
-    ]
-
     /**
-     * 创建成功以后把 URL 改成：
+     * 创建成功以后，
+     * URL 变成：
      *
      * /interview?id=xxx
-     *
-     * 后面刷新页面就可以直接加载当前面试
      */
-    router.replace({
+    await router.replace({
       path: '/interview',
       query: {
         id: String(data.id)
       }
     })
 
+    /**
+     * 直接重新从数据库读取，
+     * 不再手动制造临时消息。
+     */
+    await loadInterview(data.id)
+
+    antMessage.success(
+      '面试开始'
+    )
   } catch (error) {
     console.error(
       '创建面试失败:',
@@ -756,59 +1005,6 @@ const startInterview = async () => {
 }
 
 /**
- * 加载历史面试
- */
-const loadInterview = async (
-  id: number
-) => {
-  try {
-    submitting.value = true
-
-    const data = await getInterview(id)
-
-    interviewId.value = data.id
-
-    messages.value = data.messages || []
-
-    question.value =
-      data.current_question || ''
-
-    finished.value =
-      data.status === 'finished'
-
-    /**
-     * 如果已经结束，继续加载报告
-     */
-    if (finished.value) {
-      try {
-        const reportData =
-          await getInterviewReport(id)
-
-        report.value =
-          reportData.report
-      } catch (error) {
-        console.error(
-          '加载面试报告失败:',
-          error
-        )
-      }
-    }
-
-  } catch (error) {
-    console.error(
-      '加载面试失败:',
-      error
-    )
-
-    antMessage.error(
-      '加载面试记录失败'
-    )
-  } finally {
-    submitting.value = false
-  }
-}
-
-/**
  * 提交回答
  */
 const submitAnswer = async () => {
@@ -816,24 +1012,26 @@ const submitAnswer = async () => {
     antMessage.error(
       '当前面试不存在'
     )
+
     return
   }
 
-  if (!answer.value.trim()) {
+  const currentAnswer =
+    answer.value.trim()
+
+  if (!currentAnswer) {
     antMessage.warning(
       '请输入回答内容'
     )
+
     return
   }
 
   try {
     submitting.value = true
 
-    const currentAnswer =
-      answer.value.trim()
-
     /**
-     * 调用后端
+     * 提交回答
      */
     const data =
       await answerInterview(
@@ -842,57 +1040,30 @@ const submitAnswer = async () => {
       )
 
     /**
- * 后端已经把回答、评分、反馈等信息保存到数据库
- *
- * 这里重新加载一次面试记录，
- * 保证前端显示的数据和数据库保持一致
- */
-const latestInterview = await getInterview(
-  interviewId.value
-)
-
-messages.value =
-  latestInterview.messages || []
-
-    /**
      * 清空输入框
      */
     answer.value = ''
 
     /**
-     * 面试结束
+     * 重新从数据库读取面试记录
+     *
+     * 这是非常重要的一步：
+     * 数据库才是最终数据源。
+     */
+    await loadInterview(
+      interviewId.value
+    )
+
+    /**
+     * 如果结束：
+     * loadInterview() 会自动加载报告
      */
     if (data.finished) {
       finished.value = true
 
-      /**
-       * 后端返回了报告就直接使用
-       */
-      if (data.report) {
-        report.value =
-          data.report
-      } else {
-        /**
-         * 如果没有直接返回报告，
-         * 再请求一次
-         */
-        try {
-          const reportData =
-            await getInterviewReport(
-              interviewId.value
-            )
-
-          report.value =
-            reportData.report
-        } catch (error) {
-          console.error(
-            '获取面试报告失败:',
-            error
-          )
-        }
-      }
-
       question.value = ''
+
+      await loadInterviewReport()
 
       antMessage.success(
         '本次面试已完成'
@@ -902,28 +1073,19 @@ messages.value =
     }
 
     /**
-     * 没结束
+     * 如果没有结束，
+     * 后端会返回下一道问题。
      *
-     * 后端会返回下一道题
+     * 但这里仍然优先使用数据库里的
+     * current_question。
      */
-    if (data.next_question) {
+    if (
+      !finished.value &&
+      data.next_question
+    ) {
       question.value =
         data.next_question
-
-      messages.value.push({
-        id: Date.now() + 1,
-        role: 'interviewer',
-        content:
-          data.next_question,
-        score: null,
-        feedback: null,
-        reference_answer: null,
-        knowledge_gap: [],
-        created_at:
-          new Date().toISOString()
-      })
     }
-
   } catch (error) {
     console.error(
       '提交回答失败:',
@@ -943,15 +1105,11 @@ messages.value =
  *
  * 两种情况：
  *
- * 1.
- * /interview?resumeId=1
+ * 1. /interview?resumeId=1
+ *    开始新面试
  *
- * 开始新的面试
- *
- * 2.
- * /interview?id=12
- *
- * 加载历史面试
+ * 2. /interview?id=12
+ *    加载历史面试
  */
 onMounted(async () => {
   const id = Number(
@@ -991,9 +1149,11 @@ onMounted(async () => {
 .page-header {
   height: 72px;
   padding: 0 24px;
+
   display: flex;
   align-items: center;
   justify-content: space-between;
+
   background: #ffffff;
   border-bottom: 1px solid #f0f0f0;
 }
@@ -1026,9 +1186,9 @@ onMounted(async () => {
 ========================= */
 
 .page-content {
-  padding: 20px;
   max-width: 1400px;
   margin: 0 auto;
+  padding: 20px;
 }
 
 .left-column,
@@ -1047,10 +1207,12 @@ onMounted(async () => {
 }
 
 .info-item {
+  min-height: 38px;
+
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 38px;
+
   border-bottom: 1px solid #f5f5f5;
 }
 
@@ -1072,18 +1234,21 @@ onMounted(async () => {
 .info-score {
   margin-top: 24px;
   padding: 20px;
+
   text-align: center;
+
   background: #fafafa;
   border-radius: 8px;
 }
 
 .score-label {
-  font-size: 14px;
   color: #8c8c8c;
+  font-size: 14px;
 }
 
 .score-value {
   margin-top: 5px;
+
   font-size: 38px;
   line-height: 1.2;
   font-weight: 700;
@@ -1110,7 +1275,9 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+
   margin-bottom: 6px;
+
   font-size: 13px;
 }
 
@@ -1135,7 +1302,9 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 8px;
+
   margin-bottom: 10px;
+
   color: #595959;
   font-size: 13px;
   font-weight: 500;
@@ -1148,24 +1317,25 @@ onMounted(async () => {
 .avatar {
   width: 30px;
   height: 30px;
-  border-radius: 50%;
 
   display: flex;
   align-items: center;
   justify-content: center;
+
+  border-radius: 50%;
 
   font-size: 12px;
   font-weight: 600;
 }
 
 .interviewer-avatar {
-  background: #e6f4ff;
   color: #1677ff;
+  background: #e6f4ff;
 }
 
 .candidate-avatar {
-  background: #f6ffed;
   color: #389e0d;
+  background: #f6ffed;
 }
 
 /* =========================
@@ -1178,11 +1348,13 @@ onMounted(async () => {
 
 .question-content {
   padding: 16px;
-  background: #f5f5f5;
-  border-radius: 8px;
+
   color: #262626;
   line-height: 1.8;
   white-space: pre-wrap;
+
+  background: #f5f5f5;
+  border-radius: 8px;
 }
 
 /* =========================
@@ -1190,17 +1362,19 @@ onMounted(async () => {
 ========================= */
 
 .candidate-message {
+  max-width: 90%;
   margin-top: 20px;
   margin-left: auto;
-  max-width: 90%;
 }
 
 .answer-content {
   padding: 16px;
-  background: #e6f4ff;
-  border-radius: 8px;
+
   line-height: 1.8;
   white-space: pre-wrap;
+
+  background: #e6f4ff;
+  border-radius: 8px;
 }
 
 /* =========================
@@ -1215,18 +1389,20 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+
   margin-bottom: 12px;
 }
 
 .result-title {
+  color: #262626;
   font-size: 14px;
   font-weight: 600;
-  color: #262626;
 }
 
 .feedback-box {
   margin-bottom: 12px;
   padding: 14px 16px;
+
   background: #fafafa;
   border-left: 3px solid #1677ff;
   border-radius: 4px;
@@ -1234,9 +1410,10 @@ onMounted(async () => {
 
 .feedback-title {
   margin-bottom: 7px;
+
+  color: #262626;
   font-size: 13px;
   font-weight: 600;
-  color: #262626;
 }
 
 .feedback-content {
@@ -1247,13 +1424,30 @@ onMounted(async () => {
 }
 
 /* =========================
+   Knowledge Gap
+========================= */
+
+.knowledge-gap {
+  margin-top: 12px;
+}
+
+.knowledge-gap-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  margin-top: 8px;
+}
+
+/* =========================
    Reference Answer
 ========================= */
 
 .reference-box {
+  overflow: hidden;
+
   border: 1px solid #f0f0f0;
   border-radius: 6px;
-  overflow: hidden;
 }
 
 .reference-header {
@@ -1264,6 +1458,7 @@ onMounted(async () => {
   justify-content: space-between;
 
   cursor: pointer;
+
   background: #fafafa;
 
   transition: all 0.2s;
@@ -1274,9 +1469,9 @@ onMounted(async () => {
 }
 
 .reference-title {
+  color: #262626;
   font-size: 13px;
   font-weight: 600;
-  color: #262626;
 }
 
 .reference-toggle {
@@ -1313,7 +1508,7 @@ onMounted(async () => {
 }
 
 /* =========================
-   Current Answer
+   Answer
 ========================= */
 
 .answer-card {
@@ -1323,12 +1518,14 @@ onMounted(async () => {
 .current-question {
   margin-bottom: 16px;
   padding: 16px;
+
   background: #f5f7fa;
   border-radius: 8px;
 }
 
 .current-question-label {
   margin-bottom: 8px;
+
   color: #8c8c8c;
   font-size: 13px;
 }
@@ -1363,6 +1560,12 @@ onMounted(async () => {
   border-radius: 10px;
 }
 
+.report-loading {
+  display: block;
+  padding: 40px;
+  text-align: center;
+}
+
 .report-score {
   padding: 20px 0;
   text-align: center;
@@ -1383,9 +1586,29 @@ onMounted(async () => {
 
   margin-bottom: 12px;
 
+  color: #262626;
   font-size: 15px;
   font-weight: 600;
-  color: #262626;
+}
+
+.report-ability-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.report-ability-item {
+  width: 100%;
+}
+
+.report-ability-header {
+  margin-bottom: 6px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  font-size: 13px;
 }
 
 .report-tags {
@@ -1397,6 +1620,7 @@ onMounted(async () => {
 .suggestion-list {
   margin: 0;
   padding-left: 20px;
+
   color: #595959;
   line-height: 2;
 }
@@ -1444,6 +1668,7 @@ onMounted(async () => {
 
   .subtitle {
     max-width: 200px;
+
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1475,14 +1700,7 @@ onMounted(async () => {
     width: 100%;
   }
 }
-.knowledge-gap {
-  margin-top: 12px;
-}
-
-.knowledge-gap-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
-}
 </style>
+
+
+
