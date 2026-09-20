@@ -501,7 +501,7 @@ def get_interview(
     }
 
 
-@router.get("/interviews/{interview_id}/report")
+@router.get("/{interview_id}/report")
 def get_interview_report(
     interview_id: int,
     db: Session = Depends(get_db),
@@ -521,20 +521,22 @@ def get_interview_report(
     if not interview:
         raise HTTPException(
             status_code=404,
-            detail="面试不存在"
+            detail="面试记录不存在"
         )
 
     if interview.status != "finished":
         raise HTTPException(
             status_code=400,
-            detail="面试还没有结束"
+            detail="面试尚未结束，暂时无法查看报告"
         )
 
-    return {
-        "interview_id": interview.id,
-        "total_score": interview.total_score,
-        "report": interview.report
-    }
+    if not interview.report:
+        raise HTTPException(
+            status_code=404,
+            detail="面试报告不存在"
+        )
+
+    return interview.report
 
 
 @router.get("/interviews")
