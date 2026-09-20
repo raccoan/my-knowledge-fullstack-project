@@ -9,6 +9,7 @@ from database import get_db
 from models.file import File
 from models.document import Document
 from models.chunk import Chunk
+from schemas.document import DocumentDetailResponse
 
 from utils.auth import get_current_user
 from utils.pdf import extract_pdf_text
@@ -208,6 +209,68 @@ def get_files(
         })
 
     return result
+
+
+@router.get("/{document_id}", response_model=DocumentDetailResponse)
+def get_file_detail(
+    document_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    user_id = current_user["id"]
+
+    document = (
+        db.query(Document)
+        .filter(
+            Document.id == document_id,
+            Document.user_id == user_id
+        )
+        .first()
+    )
+
+    if not document:
+        raise HTTPException(
+            status_code=404,
+            detail="文档不存在"
+        )
+
+    file = (
+        db.query(File)
+        .filter(
+            File.id == document.file_id,
+            File.user_id == user_id
+        )
+        .first()
+    )
+
+    chunks = (
+        db.query(Chunk)
+        .filter(
+            Chunk.document_id == document.id
+        )
+        .order_by(Chunk.chunk_index.asc())
+        .all()
+    )
+
+    return {
+        "id": document.id,
+        "file_id": document.file_id,
+        "filename": file.filename if file else "",
+        "file_size": file.file_size if file else None,
+        "status": document.status,
+        "chunk_count": document.chunk_count,
+        "created_at": document.created_time,
+        "chunks": [
+            {
+                "id": chunk.id,
+                "chunk_index": chunk.chunk_index,
+                "content": chunk.content
+            }
+            for chunk in chunks
+        ]
+    }
+
+
 
 
 @router.delete("/{document_id}")
