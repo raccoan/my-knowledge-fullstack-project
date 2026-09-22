@@ -32,7 +32,13 @@ import {
 } from '@/api/chat'
 
 
-import {createConversation,getConversationMessages,getConversations,deleteConversation} from '@/api/conversations'
+import {
+  createConversation,
+  getConversationMessages,
+  getConversations,
+  deleteConversation,
+  updateConversationTitle
+} from '@/api/conversations'
 
 import type {
   ChatSource,
@@ -105,6 +111,10 @@ const router = useRouter()
 const messages = ref<MessageItem[]>([])
 
 const conversations = ref<Conversation[]>([])
+
+const editingConversationId = ref<number | null>(null)
+
+  const editingTitle = ref("")
 
 const currentConversationId = ref<number | null>(null)
 
@@ -583,6 +593,86 @@ const loadConversations = async () => {
   }
 }
 
+const startEditConversation = (
+    item:Conversation
+)=>{
+
+    editingConversationId.value =
+        item.id
+
+    editingTitle.value =
+        item.title
+}
+
+const saveConversationTitle = async(
+    item:Conversation
+)=>{
+
+
+    if(!editingTitle.value.trim()){
+        message.warning(
+            "标题不能为空"
+        )
+
+        return
+    }
+
+
+    await updateConversationTitle(
+        item.id,
+        editingTitle.value
+    )
+
+
+    item.title =
+        editingTitle.value
+
+
+    editingConversationId.value =
+        null
+
+
+    message.success(
+        "修改成功"
+    )
+}
+
+
+const removeConversation = async(
+    item:Conversation
+)=>{
+
+
+    await deleteConversation(
+        item.id
+    )
+
+
+    conversations.value =
+        conversations.value.filter(
+            c=>c.id!==item.id
+        )
+
+
+    if(
+        currentConversationId.value
+        === item.id
+    ){
+
+        currentConversationId.value =
+            null
+
+        messages.value=[]
+    }
+
+
+    message.success(
+        "删除成功"
+    )
+}
+
+
+
 /**
  * =========================
  * 清空聊天
@@ -741,9 +831,69 @@ onMounted(()=>{
                 switchConversation(item.id)
               "
             >
-              <div class="conversation-title">
-                {{ item.title }}
-              </div>
+            <div class="conversation-title">
+
+
+              <template
+                v-if="
+                editingConversationId !== item.id
+                "
+              >
+
+                <span>
+                  {{ item.title }}
+                </span>
+
+
+                <span class="conversation-actions">
+
+                  <a-button
+                    type="text"
+                    size="small"
+                    @click.stop="
+                    startEditConversation(item)
+                    "
+                  >
+                    编辑
+                  </a-button>
+
+
+                  <a-button
+                    danger
+                    type="text"
+                    size="small"
+                    @click.stop="
+                    removeConversation(item)
+                    "
+                  >
+                    删除
+                  </a-button>
+
+
+                </span>
+
+              </template>
+
+
+
+              <template v-else>
+
+
+                <a-input
+                  v-model:value="
+                    editingTitle
+                  "
+                  size="small"
+                  @pressEnter="
+                    saveConversationTitle(item)
+                  "
+                />
+
+
+              </template>
+
+
+            </div>
             </a-list-item>
           </template>
         </a-list>

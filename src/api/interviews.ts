@@ -176,7 +176,7 @@ export function updateInterviewTitle(
   title: string
 ) {
   return request.patch(
-    `/interviews/${interviewId}`,
+    `/interviews/${interviewId}/title`,
     {
       title
     }

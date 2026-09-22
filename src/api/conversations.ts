@@ -44,3 +44,22 @@ export async function deleteConversation(conversationId:number) {
   return response.data
 }
 
+
+export const updateConversationTitle = (
+  id: number,
+  title: string
+) => {
+
+  return request.put(
+    `/conversations/${id}`,
+    null,
+    {
+      params: {
+        title
+      }
+    }
+  )
+}
+
+
+
