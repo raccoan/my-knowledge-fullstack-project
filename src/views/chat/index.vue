@@ -238,19 +238,63 @@ const sendMessage = async (
     return
   }
 
-  if (
-  currentConversationId.value === null
-) {
-  const conversation =
-    await createConversation()
+  /**
+   * =========================
+   * 确保存在当前会话
+   * =========================
+   *
+   * null 和 undefined 都视为没有会话
+   */
+  if (!currentConversationId.value) {
+    try {
+      const conversation =
+        await createConversation()
 
-  conversations.value.unshift(
-    conversation,
-  )
+      console.log(
+        '创建会话返回值:',
+        conversation,
+      )
 
-  currentConversationId.value =
-    conversation.id
-}
+      conversations.value.unshift(
+        conversation,
+      )
+
+      currentConversationId.value =
+        conversation.id
+
+      console.log(
+        '设置后的会话 ID:',
+        currentConversationId.value,
+      )
+    } catch (error) {
+      console.error(
+        '创建会话失败:',
+        error,
+      )
+
+      message.error(
+        '创建对话失败',
+      )
+
+      return
+    }
+  }
+
+  /**
+   * =========================
+   * 再次确认会话 ID
+   * =========================
+   */
+  const conversationId =
+    currentConversationId.value
+
+  if (!conversationId) {
+    message.error(
+      '当前对话不存在，请重新创建对话',
+    )
+
+    return
+  }
 
   /**
    * =========================
@@ -299,8 +343,6 @@ const sendMessage = async (
   /**
    * =========================
    * AbortController
-   *
-   * 用于停止 SSE 请求
    * =========================
    */
   const controller =
@@ -309,20 +351,26 @@ const sendMessage = async (
   abortController.value =
     controller
 
-  
   try {
+    console.log(
+      '发送聊天请求:',
+      {
+        question: text,
+        conversation_id:
+          conversationId,
+      },
+    )
 
-    if(currentConversationId.value===null){
-      const conversation = await createConversation()
-
-      currentConversationId.value = conversation.id
-      conversations.value.unshift(conversation)
-    }
-
+    /**
+     * =========================
+     * SSE
+     * =========================
+     */
     await streamChat(
       {
         question: text,
-        conversation_id:currentConversationId.value,
+        conversation_id:
+          conversationId,
       },
 
       /**
@@ -367,6 +415,24 @@ const sendMessage = async (
 
         scrollToBottom()
       },
+
+      /**
+   * AI 自动生成标题
+   */
+  (title) => {
+    const conversation =
+      conversations.value.find(
+        item =>
+          item.id === conversationId,
+      )
+
+    if (!conversation) {
+      return
+    }
+
+    conversation.title = title
+  },
+
 
       /**
        * =========================

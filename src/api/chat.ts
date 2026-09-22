@@ -17,9 +17,10 @@ export interface ChatSource {
 
 
 interface StreamEvent {
-  type: 'sources' | 'content' | 'done'
+  type: 'sources' | 'content' | 'title' | 'done'
   sources?: ChatSource[]
   content?: string
+  title?: string
 }
 
 
@@ -27,6 +28,7 @@ export async function streamChat(
   params: ChatParams,
   onSources: (sources: ChatSource[]) => void,
   onMessage: (content: string) => void,
+  onTitle: (title: string) => void,
   onDone: () => void,
   signal?: AbortSignal,
 ) {
@@ -155,7 +157,12 @@ export async function streamChat(
               eventData.content || ''
             )
 
-          } else if (
+          }else if(eventData.type === 'title'){
+
+            onTitle(
+              eventData.title || ''
+            )  
+          }else if (
             eventData.type === 'done'
           ) {
 
