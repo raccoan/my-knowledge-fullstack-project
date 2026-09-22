@@ -366,93 +366,99 @@ const sendMessage = async (
      * SSE
      * =========================
      */
-    await streamChat(
-      {
-        question: text,
-        conversation_id:
-          conversationId,
-      },
+await streamChat(
+  {
+    question: text,
+    conversation_id:
+      currentConversationId.value,
+  },
 
-      /**
-       * =========================
-       * 来源
-       * =========================
-       */
-      (sources) => {
-        const target =
-          messages.value.find(
-            item =>
-              item.id === assistantId,
-          )
+  /**
+   * =========================
+   * 来源
+   * =========================
+   */
+  (sources) => {
+    const target =
+      messages.value.find(
+        item =>
+          item.id ===
+          assistantId,
+      )
 
-        if (!target) {
-          return
-        }
+    if (!target) {
+      return
+    }
 
-        target.sources =
-          sources
+    target.sources =
+      sources
 
-        scrollToBottom()
-      },
+    scrollToBottom()
+  },
 
-      /**
-       * =========================
-       * AI 内容
-       * =========================
-       */
-      (content) => {
-        const target =
-          messages.value.find(
-            item =>
-              item.id === assistantId,
-          )
+  /**
+   * =========================
+   * AI 内容
+   * =========================
+   */
+  (content) => {
+    const target =
+      messages.value.find(
+        item =>
+          item.id ===
+          assistantId,
+      )
 
-        if (!target) {
-          return
-        }
+    if (!target) {
+      return
+    }
 
-        target.content += content
+    target.content +=
+      content
 
-        scrollToBottom()
-      },
+    scrollToBottom()
+  },
 
-      /**
+  /**
+   * =========================
    * AI 自动生成标题
+   * =========================
    */
   (title) => {
     const conversation =
       conversations.value.find(
         item =>
-          item.id === conversationId,
+          item.id ===
+          currentConversationId.value,
       )
 
     if (!conversation) {
       return
     }
 
-    conversation.title = title
+    conversation.title =
+      title
   },
 
+  /**
+   * =========================
+   * 完成
+   * =========================
+   */
+  () => {
+    loading.value = false
 
-      /**
-       * =========================
-       * 完成
-       * =========================
-       */
-      () => {
-        loading.value = false
+    currentAssistantId.value =
+      null
 
-        currentAssistantId.value =
-          null
+    abortController.value =
+      null
 
-        abortController.value =
-          null
+    scrollToBottom()
+  },
 
-        scrollToBottom()
-      },
-
-      controller.signal,
-    )
+  controller.signal,
+)
   } catch (error) {
     /**
      * =========================
