@@ -117,12 +117,12 @@ def chat_stream(
 
         # 自动生成会话标题
         if conversation.title == "新对话":
-            title = generate_conversation_title(
+            new_title = generate_conversation_title(
                 request.question,
                 answer,
             )
 
-            conversation.title = title
+            conversation.title = new_title
 
         conversation.updated_at = func.now()
 
