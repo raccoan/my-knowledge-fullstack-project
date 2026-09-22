@@ -156,3 +156,29 @@ def delete_conversation(
         "message":"删除成功"
     }
 
+
+@router.put("/conversations/{conversation_id}")
+def update_conversation_title(
+        conversation_id:int,
+        title:str,
+        db:Session = Depends(get_db),
+        current_user = Depends(get_current_user),
+):
+    user_id = current_user["id"]
+    conversation = db.query(Conversation).filter(
+        Conversation.id == conversation_id,
+            Conversation.user_id == user_id
+    ).first()
+
+    if not conversation:
+        raise HTTPException(
+            status_code=404,
+            detail="会话不存在"
+        )
+    conversation.title = title
+    db.commit()
+    db.refresh(conversation)
+    return conversation
+
+
+
