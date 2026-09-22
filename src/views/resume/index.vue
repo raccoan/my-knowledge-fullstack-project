@@ -21,6 +21,8 @@ import {
 
 import {
   getInterviews,
+  updateInterviewTitle,
+  deleteInterview,
 } from '@/api/interviews'
 
 import type {
@@ -151,6 +153,13 @@ const handleFileChange = async (
  */
 const interviews =
   ref<InterviewListItem[]>([])
+
+
+// 当前编辑的面试id
+const editId = ref<number | null>(null)
+
+// 编辑标题内容
+const editTitle = ref<string>('')
 
 
 /**
@@ -299,12 +308,83 @@ const getInterviewStatusText = (
   return '进行中'
 }
 
+// 修改标题函数
+const startEditTitle = (
+  item: any
+) => {
 
-/**
- * =========================
- * 生命周期
- * =========================
- */
+  editId.value = item.id
+
+  editTitle.value =
+    item.title ||
+    `AI 模拟面试 #${item.id}`
+
+}
+
+// 保存标题函数
+const saveTitle = async (item: any) => {
+  if (!editTitle.value.trim()) {
+    message.error('标题不能为空')
+    return
+  }
+
+  try {
+    await updateInterviewTitle(item.id, editTitle.value)
+    item.title = editTitle.value
+    message.success('标题更新成功')
+  } catch (error) {
+    console.error(error)
+    message.error('标题更新失败')
+  } finally {
+    editId.value = null
+  }
+}
+
+// 删除面试函数
+const removeInterview = async (
+  item: any
+) => {
+
+  try {
+
+    await deleteInterview(item.id)
+
+
+    // 删除本地数据
+    const index =
+      interviews.value.findIndex(
+        interview =>
+          interview.id === item.id
+      )
+
+
+    if (index !== -1) {
+      interviews.value.splice(
+        index,
+        1
+      )
+    }
+
+
+    message.success(
+      '面试删除成功'
+    )
+
+
+  } catch(error){
+
+    console.error(
+      '删除面试失败:',
+      error
+    )
+
+    message.error(
+      '面试删除失败'
+    )
+  }
+}
+
+
 
 onMounted(async () => {
   /**
@@ -878,22 +958,83 @@ onMounted(async () => {
                   class="interview-history-info"
                 >
 
-                  <div
-                    class="interview-history-title"
+
+                  <!-- 编辑标题 -->
+                  <template
+                    v-if="editId === interview.id"
                   >
-                    AI 模拟面试 #{{ interview.id }}
-                  </div>
+
+                    <a-input
+                      v-model:value="editTitle"
+                      size="small"
+                      style="width:200px"
+                      @pressEnter="
+                        saveTitle(interview)
+                      "
+                    />
+
+
+                    <a-button
+                      type="link"
+                      size="small"
+                      @click="
+                        saveTitle(interview)
+                      "
+                    >
+                      保存
+                    </a-button>
+
+
+                    <a-button
+                      type="link"
+                      size="small"
+                      danger
+                      @click="
+                        editId = null
+                      "
+                    >
+                      取消
+                    </a-button>
+
+
+                  </template>
+
+
+
+                  <!-- 正常显示标题 -->
+                  <template
+                    v-else
+                  >
+
+                    <div
+                      class="interview-history-title"
+                    >
+
+                      {{ 
+                        interview.title ||
+                        `AI模拟面试 #${interview.id}`
+                      }}
+
+
+                    </div>
+
+
+                  </template>
+
 
 
                   <div
                     class="interview-history-time"
                   >
+
                     {{
                       formatInterviewTime(
                         interview.created_at,
                       )
                     }}
+
                   </div>
+
 
                 </div>
 
@@ -950,22 +1091,60 @@ onMounted(async () => {
                   class="interview-history-action"
                 >
 
+
+                  <!-- 修改标题 -->
                   <a-button
                     size="small"
                     type="link"
                     @click="
-                      openInterview(
-                        interview,
-                      )
+                      startEditTitle(interview)
                     "
                   >
+                    修改标题
+                  </a-button>
+
+
+
+                  <!-- 打开面试 -->
+                  <a-button
+                    size="small"
+                    type="link"
+                    @click="
+                      openInterview(interview)
+                    "
+                  >
+
                     {{
-                      interview.status ===
-                      'ongoing'
+                      interview.status === 'ongoing'
                         ? '继续面试'
                         : '查看记录'
                     }}
+
                   </a-button>
+
+
+
+                  <!-- 删除 -->
+                  <a-popconfirm
+                    title="确定删除这次面试吗？"
+                    ok-text="删除"
+                    cancel-text="取消"
+                    @confirm="
+                      removeInterview(interview)
+                    "
+                  >
+
+                    <a-button
+                      size="small"
+                      type="link"
+                      danger
+                    >
+                      删除
+                    </a-button>
+
+
+                  </a-popconfirm>
+
 
                 </div>
 

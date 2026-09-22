@@ -59,7 +59,7 @@ export async function uploadResume(file: File) {
     message: string
     resume: Resume
   }>('/resumes/upload', formData, {
-    timeout: 120000,
+    timeout: 150000,
   })
 
   return response.data

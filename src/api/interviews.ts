@@ -24,6 +24,7 @@ export interface InterviewMessage {
 export interface Interview {
   id: number
   resume_id: number
+  title:string
   status: 'ongoing' | 'finished'
   total_score: number
   current_question: string | null
@@ -83,6 +84,7 @@ export interface InterviewReport {
 export interface InterviewListItem {
   id: number
   resume_id: number
+  title: string
   status: 'ongoing' | 'finished'
   total_score: number
   created_at: string
@@ -163,6 +165,38 @@ export async function getInterviews() {
 
   return response.data
 }
+
+/**
+ * =========================
+ * 修改面试名称
+ * =========================
+ */
+export function updateInterviewTitle(
+  interviewId: number,
+  title: string
+) {
+  return request.patch(
+    `/interviews/${interviewId}`,
+    {
+      title
+    }
+  )
+}
+
+/**
+ * =========================
+ * 删除面试
+ * =========================
+*/
+export function deleteInterview(
+  interviewId: number
+) {
+  return request.delete(
+    `/interviews/${interviewId}`
+  )
+}
+
+
 
 /**
  * =========================

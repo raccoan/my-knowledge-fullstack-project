@@ -724,7 +724,8 @@ import {
   createInterview,
   answerInterview,
   getInterview,
-  getInterviewReport
+  getInterviewReport,
+
 } from '@/api/interviews'
 
 import type {
@@ -1008,6 +1009,7 @@ const startInterview = async () => {
  * 提交回答
  */
 const submitAnswer = async () => {
+
   if (!interviewId.value) {
     antMessage.error(
       '当前面试不存在'
@@ -1016,8 +1018,10 @@ const submitAnswer = async () => {
     return
   }
 
+
   const currentAnswer =
     answer.value.trim()
+
 
   if (!currentAnswer) {
     antMessage.warning(
@@ -1027,38 +1031,29 @@ const submitAnswer = async () => {
     return
   }
 
+
   try {
+
     submitting.value = true
 
-    /**
-     * 提交回答
-     */
+
     const data =
       await answerInterview(
         interviewId.value,
         currentAnswer
       )
 
-    /**
-     * 清空输入框
-     */
+
     answer.value = ''
 
-    /**
-     * 重新从数据库读取面试记录
-     *
-     * 这是非常重要的一步：
-     * 数据库才是最终数据源。
-     */
+
     await loadInterview(
       interviewId.value
     )
 
-    /**
-     * 如果结束：
-     * loadInterview() 会自动加载报告
-     */
+
     if (data.finished) {
+
       finished.value = true
 
       question.value = ''
@@ -1070,34 +1065,28 @@ const submitAnswer = async () => {
       )
 
       return
+
     }
 
-    /**
-     * 如果没有结束，
-     * 后端会返回下一道问题。
-     *
-     * 但这里仍然优先使用数据库里的
-     * current_question。
-     */
-    if (
-      !finished.value &&
-      data.next_question
-    ) {
-      question.value =
-        data.next_question
-    }
-  } catch (error) {
+
+  } catch(error){
+
     console.error(
       '提交回答失败:',
       error
     )
 
+
     antMessage.error(
       '提交回答失败，请稍后重试'
     )
+
   } finally {
-    submitting.value = false
+
+    submitting.value=false
+
   }
+
 }
 
 /**
