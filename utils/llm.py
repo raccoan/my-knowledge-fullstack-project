@@ -24,7 +24,7 @@ def chat_with_llm(question:str):
 
 
 def chat_with_llm_stream(question:str):
-    print("开始调用LLM")
+
     response = client.chat.completions.create(
         model="glm-4.5",
         messages=[
@@ -36,14 +36,18 @@ def chat_with_llm_stream(question:str):
         stream=True
     )
 
-    print("LLM已经返回response")
+
     for chunk in response:
-        print("收到chunk:",chunk)
-        content=chunk.choices[0].delta.content
+
+        content = (
+            chunk
+            .choices[0]
+            .delta
+            .content
+        )
+
         if content:
-            print("输出内容:",content)
             yield content
-    print("LLM输出结束")
 
 def parse_resume_with_llm(resume_text: str):
     prompt = f"""
@@ -132,7 +136,6 @@ JSON 格式：
         content = content.strip()
 
     return json.loads(content)
-
 
 
 def generate_interview_question(
@@ -321,7 +324,6 @@ def generate_interview_question(
 12. 不要返回 JSON。
 13. 不要使用 Markdown。
 14. 不要添加“问题：”等前缀。
-
 请直接输出面试问题。
 """
 
@@ -477,11 +479,14 @@ def evaluate_interview_answer_with_knowledge(
 
 1. score 为 0-100 的整数。
 
-2. feedback 分析候选人的回答正确的地方和不足。
+2. feedback：
+控制在100字以内。
+只指出关键优点和一个主要不足。
 
 3. reference_answer：
-   给出这道题一个适合技术面试场景的参考答案。
-   不管候选人回答正确与否，都必须提供参考答案。
+控制在200字以内。
+只提供核心回答思路。
+不要展开长篇解释。
 
 4. knowledge_gap：
    根据候选人的回答，列出候选人没有掌握或者回答不充分的知识点。
@@ -516,23 +521,61 @@ def evaluate_interview_answer_with_knowledge(
                 "content": prompt
             }
         ],
-        temperature=0.5
+        temperature=0.5,
     )
 
     content = response.choices[0].message.content.strip()
 
-    if content.startswith("```"):
+
+    # 去掉markdown包裹
+    if "```json" in content:
         content = content.replace(
             "```json",
             ""
         )
+
+    if "```" in content:
         content = content.replace(
             "```",
             ""
         )
-        content = content.strip()
 
-    return json.loads(content)
+    content = content.strip()
+
+    try:
+
+        return json.loads(content)
+
+    except json.JSONDecodeError:
+
+        print("JSON解析失败")
+        print(content)
+
+
+        # 尝试截取第一个JSON对象
+
+        start = content.find("{")
+        end = content.rfind("}")
+
+        if start != -1 and end != -1:
+
+            json_text = content[start:end + 1]
+
+            try:
+                return json.loads(json_text)
+
+            except Exception:
+                pass
+
+        # 最后兜底
+        return {
+            "score": 0,
+            "feedback": "AI评价生成失败，请重新回答",
+            "reference_answer": "",
+            "knowledge_gap": [],
+            "next_question": "",
+            "finished": False
+        }
 
 def generate_interview_report(
     resume_data,
@@ -615,6 +658,74 @@ def generate_interview_report(
         content = content.strip()
 
     return json.loads(content)
+
+
+def generate_next_question_simple(
+    resume_data,
+    question_type,
+    previous_questions
+):
+
+    previous = "\n".join(
+        previous_questions
+    )
+
+
+    prompt = f"""
+你是一名技术面试官。
+
+根据候选人简历生成一道面试题。
+
+候选人信息：
+
+{json.dumps(
+    resume_data,
+    ensure_ascii=False
+)}
+
+
+当前题型：
+
+{question_type}
+
+
+已经问过：
+
+{previous}
+
+
+要求：
+
+1. 只生成一道问题
+2. 必须和简历相关
+3. 不要解释
+4. 不要输出答案
+
+
+直接输出问题。
+"""
+
+
+    response = client.chat.completions.create(
+
+        model="glm-4.5",
+
+        messages=[
+            {
+                "role":"user",
+                "content":prompt
+            }
+        ],
+
+
+        temperature=0.5,
+
+        max_tokens=300
+    )
+
+
+    return response.choices[0].message.content.strip()
+
 
 
 

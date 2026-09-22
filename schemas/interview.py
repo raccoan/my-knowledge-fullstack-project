@@ -28,3 +28,9 @@ class InterviewReportResponse(BaseModel):
     weaknesses: list[str]
     knowledge_gaps: list[str]
     suggestions: list[str]
+
+
+class  UpdateInterviewTitleRequest(BaseModel):
+
+    title:str | None
+

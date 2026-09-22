@@ -1,4 +1,5 @@
 import os
+import time
 
 from fastapi import (
     APIRouter,
@@ -60,18 +61,42 @@ def upload_resume(
         )
 
     # 5. 解析 PDF
+
     print("开始解析 PDF")
+
+    pdf_start = time.time()
 
     text = extract_pdf_text(file_path)
 
-    print("PDF 解析完成")
-    print("简历文本长度:", len(text))
+    pdf_time = time.time() - pdf_start
+
+    print("PDF解析完成")
+    print(
+        "PDF解析耗时:",
+        pdf_time,
+        "秒"
+    )
+
+    print(
+        "简历文本长度:",
+        len(text)
+    )
 
     print("开始调用 LLM 解析简历")
 
+    llm_start = time.time()
+
     structured_data = parse_resume_with_llm(text)
 
-    print("LLM 简历解析完成")
+    llm_time = time.time() - llm_start
+
+    print("LLM简历解析完成")
+
+    print(
+        "LLM解析耗时:",
+        llm_time,
+        "秒"
+    )
     # 6. 保存数据库
     resume = Resume(
         user_id=user_id,
@@ -130,3 +155,9 @@ def get_resumes(
         }
         for resume in resumes
     ]
+
+
+
+
+
+

@@ -55,3 +55,8 @@ class Interview(Base):
         JSON,
         nullable=True
     )
+
+    title = Column(
+        String(255),
+        nullable=True,
+    )
