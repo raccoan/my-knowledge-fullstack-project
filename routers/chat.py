@@ -7,7 +7,7 @@ from models.conversation import Conversation
 from models.message import Message
 from schemas.chat import ChatRequest
 from utils.rag import rag_answer, build_prompt,retrieve_documents
-from utils.llm import chat_with_llm_stream
+from utils.llm import chat_with_llm_stream,generate_conversation_title
 from fastapi import APIRouter,HTTPException
 from fastapi.responses import StreamingResponse
 from models.user import  User
@@ -115,9 +115,43 @@ def chat_stream(
 
         db.add(assistant_message)
 
+        # 自动生成会话标题
+        if conversation.title == "新对话":
+            title = generate_conversation_title(
+                request.question,
+                answer,
+            )
+
+            conversation.title = title
+
         conversation.updated_at = func.now()
 
         db.commit()
+
+        # 如果生成了新标题，通知前端
+        if conversation.title != "新对话":
+            yield (
+                    "data: "
+                    + json.dumps(
+                {
+                    "type": "title",
+                    "title": conversation.title
+                },
+                ensure_ascii=False
+            )
+                    + "\n\n"
+            )
+
+        yield (
+                "data: "
+                + json.dumps(
+            {
+                "type": "done"
+            },
+            ensure_ascii=False
+        )
+                + "\n\n"
+        )
 
         yield (
             "data: "

@@ -16,12 +16,11 @@ router = APIRouter()
 # 创建新对话接口
 @router.post("/conversations")
 def create_conversation(
-        db:Session=Depends(get_db),
-        current_user = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
 ):
-    user_id=current_user["id"]
     conversation = Conversation(
-        user_id=user_id,
+        user_id=current_user["id"],
         title="新对话"
     )
 
@@ -30,10 +29,11 @@ def create_conversation(
     db.refresh(conversation)
 
     return {
-        "user_id":user_id,
-        "title":conversation.title,
-        "created_at":conversation.created_at,
-        "updated_at":conversation.updated_at,
+        "id": conversation.id,
+        "user_id": conversation.user_id,
+        "title": conversation.title,
+        "created_at": conversation.created_at,
+        "updated_at": conversation.updated_at
     }
 
 # 获取当前用户所有对话接口

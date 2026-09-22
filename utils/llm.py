@@ -9,6 +9,60 @@ client = OpenAI(
     base_url="https://open.bigmodel.cn/api/paas/v4"
 )
 
+def generate_conversation_title(
+    question,
+    answer
+):
+
+    prompt = f"""
+你是一个AI助手。
+
+请根据下面的用户问题和AI回答，
+生成一个简洁的会话标题。
+
+要求：
+
+1. 标题控制在15个字以内。
+2. 不要带标点。
+3. 不要出现“关于”“讨论”等无意义词。
+4. 只返回标题文本。
+
+
+用户问题：
+{question}
+
+
+AI回答：
+{answer}
+
+"""
+
+
+    response = client.chat.completions.create(
+        model="glm-4.5",
+        messages=[
+            {
+                "role":"user",
+                "content":prompt
+            }
+        ],
+        temperature=0.5
+    )
+
+
+    title = (
+        response
+        .choices[0]
+        .message
+        .content
+        .strip()
+    )
+
+
+    return title
+
+
+
 def chat_with_llm(question:str):
     response = client.chat.completions.create(
         model="glm-4.5",
