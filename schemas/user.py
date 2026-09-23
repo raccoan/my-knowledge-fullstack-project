@@ -14,14 +14,21 @@ class RegisterRequest(BaseModel):
         max_length=50
     )
 
-    email: str
+    email: str | None = None
 
-    phone: str
+    phone: str | None = None
+
+    code: str = Field(
+        min_length=6,
+        max_length=6
+    )
 
     password: str = Field(
         min_length=6,
         max_length=100
     )
+
+    code_type:str
 
 
 class LoginRequest(BaseModel):

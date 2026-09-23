@@ -10,6 +10,7 @@ from utils.password import hash_password,verify_password
 
 from utils.jwt import create_token
 from utils.auth import  get_current_user
+from utils.verification import verify_code
 router = APIRouter()
 
 
@@ -144,7 +145,73 @@ def register(
     user: RegisterRequest,
     db: Session = Depends(get_db)
 ):
-    # 1. 检查用户名
+    # =========================
+    # 1. 检查验证码类型
+    # =========================
+
+    if user.code_type not in ["email", "phone"]:
+        raise HTTPException(
+            status_code=400,
+            detail="验证码类型错误"
+        )
+
+    # =========================
+    # 2. 获取注册联系方式
+    # =========================
+
+    target = None
+
+    if user.code_type == "email":
+        if not user.email:
+            raise HTTPException(
+                status_code=400,
+                detail="请输入邮箱"
+            )
+
+        if user.phone:
+            raise HTTPException(
+                status_code=400,
+                detail="邮箱注册不能填写手机号"
+            )
+
+        target = user.email
+
+    elif user.code_type == "phone":
+        if not user.phone:
+            raise HTTPException(
+                status_code=400,
+                detail="请输入手机号"
+            )
+
+        if user.email:
+            raise HTTPException(
+                status_code=400,
+                detail="手机号注册不能填写邮箱"
+            )
+
+        target = user.phone
+
+    # =========================
+    # 3. 验证验证码
+    # =========================
+
+    verified = verify_code(
+        db=db,
+        target=target,
+        code=user.code,
+        code_type=user.code_type
+    )
+
+    if not verified:
+        raise HTTPException(
+            status_code=400,
+            detail="验证码错误或已过期"
+        )
+
+    # =========================
+    # 4. 检查用户名
+    # =========================
+
     exist_user = (
         db.query(UserModel)
         .filter(
@@ -154,53 +221,61 @@ def register(
     )
 
     if exist_user:
-        return JSONResponse(
+        raise HTTPException(
             status_code=400,
-            content={
-                "message": "用户名已存在"
-            }
+            detail="用户名已存在"
         )
 
-    # 2. 检查邮箱
-    exist_email = (
-        db.query(UserModel)
-        .filter(
-            UserModel.email == user.email
-        )
-        .first()
-    )
+    # =========================
+    # 5. 检查邮箱
+    # =========================
 
-    if exist_email:
-        return JSONResponse(
-            status_code=400,
-            content={
-                "message": "邮箱已被注册"
-            }
+    if user.email:
+        exist_email = (
+            db.query(UserModel)
+            .filter(
+                UserModel.email == user.email
+            )
+            .first()
         )
 
-    # 3. 检查手机号
-    exist_phone = (
-        db.query(UserModel)
-        .filter(
-            UserModel.phone == user.phone
-        )
-        .first()
-    )
+        if exist_email:
+            raise HTTPException(
+                status_code=400,
+                detail="邮箱已被注册"
+            )
 
-    if exist_phone:
-        return JSONResponse(
-            status_code=400,
-            content={
-                "message": "手机号已被注册"
-            }
+    # =========================
+    # 6. 检查手机号
+    # =========================
+
+    if user.phone:
+        exist_phone = (
+            db.query(UserModel)
+            .filter(
+                UserModel.phone == user.phone
+            )
+            .first()
         )
 
-    # 4. 密码加密
+        if exist_phone:
+            raise HTTPException(
+                status_code=400,
+                detail="手机号已被注册"
+            )
+
+    # =========================
+    # 7. 密码加密
+    # =========================
+
     hashed_password = hash_password(
         user.password
     )
 
-    # 5. 创建用户
+    # =========================
+    # 8. 创建用户
+    # =========================
+
     new_user = UserModel(
         username=user.username,
         email=user.email,
@@ -208,23 +283,18 @@ def register(
         password=hashed_password
     )
 
-    # 6. 保存数据库
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
 
-    # 7. 返回注册结果
-    return JSONResponse(
-        status_code=201,
-        content={
-            "message": "注册成功",
-            "user": {
-                "id": new_user.id,
-                "username": new_user.username,
-                "email": new_user.email,
-                "phone": new_user.phone
-            }
+    return {
+        "message": "注册成功",
+        "user": {
+            "id": new_user.id,
+            "username": new_user.username,
+            "email": new_user.email,
+            "phone": new_user.phone
         }
-    )
+    }
 
 
