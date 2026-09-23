@@ -1,9 +1,10 @@
 from fastapi import APIRouter,Depends,HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from starlette.responses import JSONResponse
 
 from database import get_db
-from schemas.user import User, LoginRequest,RegisterRequest
+from schemas.user import User, LoginRequest,RegisterRequest,ResetPasswordRequest
 from models.user import User as UserModel
 
 from utils.password import hash_password,verify_password
@@ -16,29 +17,41 @@ from utils.verification import verify_code
 router = APIRouter()
 
 
-# 注册接口
 
 # 登录接口
 @router.post('/login')
 def login(
-    user:LoginRequest,
-    db:Session = Depends(get_db)
+    user: LoginRequest,
+    db: Session = Depends(get_db)
 ):
-    db_user = db.query(UserModel).filter(UserModel.username == user.username).first()
+    db_user = (
+        db.query(UserModel)
+        .filter(
+            UserModel.username == user.username
+        )
+        .first()
+    )
+
     if not db_user:
-        return {"message":"该用户不存在"}
+        raise HTTPException(
+            status_code=401,
+            detail="用户名或密码错误"
+        )
+
     if not verify_password(
         user.password,
         db_user.password
     ):
-        return {"message":"密码错误"}
-    print("数据库查询到的用户:", db_user.id, db_user.username)
+        raise HTTPException(
+            status_code=401,
+            detail="用户名或密码错误"
+        )
 
-    # print("登录用户:", user.id, user.username)
-    token = create_token({
-        "id":db_user.id,
-        "username":db_user.username
-    })
+    token = create_token(
+        {
+            "user_id": db_user.id
+        }
+    )
 
     return {
         "message": "登录成功",
@@ -112,56 +125,33 @@ def register(
     user: RegisterRequest,
     db: Session = Depends(get_db)
 ):
-    # =========================
     # 1. 检查验证码类型
-    # =========================
-
     if user.code_type not in ["email", "phone"]:
         raise HTTPException(
             status_code=400,
             detail="验证码类型错误"
         )
 
-    # =========================
-    # 2. 获取注册联系方式
-    # =========================
-
-    target = None
-
+    # 2. 根据验证码类型确定注册目标
     if user.code_type == "email":
         if not user.email:
             raise HTTPException(
                 status_code=400,
-                detail="请输入邮箱"
-            )
-
-        if user.phone:
-            raise HTTPException(
-                status_code=400,
-                detail="邮箱注册不能填写手机号"
+                detail="邮箱不能为空"
             )
 
         target = user.email
 
-    elif user.code_type == "phone":
+    else:
         if not user.phone:
             raise HTTPException(
                 status_code=400,
-                detail="请输入手机号"
-            )
-
-        if user.email:
-            raise HTTPException(
-                status_code=400,
-                detail="手机号注册不能填写邮箱"
+                detail="手机号不能为空"
             )
 
         target = user.phone
 
-    # =========================
     # 3. 验证验证码
-    # =========================
-
     verify_result = verify_code(
         db=db,
         target=target,
@@ -181,11 +171,8 @@ def register(
             detail="验证码错误，请重新输入"
         )
 
-    # =========================
-    # 4. 检查用户名
-    # =========================
-
-    exist_user = (
+    # 4. 检查用户名是否已经注册
+    existing_username = (
         db.query(UserModel)
         .filter(
             UserModel.username == user.username
@@ -193,18 +180,15 @@ def register(
         .first()
     )
 
-    if exist_user:
+    if existing_username:
         raise HTTPException(
             status_code=400,
-            detail="用户名已存在"
+            detail="用户名已存在，请更换一个"
         )
 
-    # =========================
-    # 5. 检查邮箱
-    # =========================
-
+    # 5. 检查邮箱是否已经注册
     if user.email:
-        exist_email = (
+        existing_email = (
             db.query(UserModel)
             .filter(
                 UserModel.email == user.email
@@ -212,18 +196,15 @@ def register(
             .first()
         )
 
-        if exist_email:
+        if existing_email:
             raise HTTPException(
                 status_code=400,
-                detail="邮箱已被注册"
+                detail="该邮箱已注册，请直接登录"
             )
 
-    # =========================
-    # 6. 检查手机号
-    # =========================
-
+    # 6. 检查手机号是否已经注册
     if user.phone:
-        exist_phone = (
+        existing_phone = (
             db.query(UserModel)
             .filter(
                 UserModel.phone == user.phone
@@ -231,43 +212,93 @@ def register(
             .first()
         )
 
-        if exist_phone:
+        if existing_phone:
             raise HTTPException(
                 status_code=400,
-                detail="手机号已被注册"
+                detail="该手机号已注册，请直接登录"
             )
 
-    # =========================
     # 7. 密码加密
-    # =========================
-
     hashed_password = hash_password(
         user.password
     )
 
-    # =========================
     # 8. 创建用户
-    # =========================
-
-    new_user = UserModel(
+    db_user = UserModel(
         username=user.username,
+        password=hashed_password,
         email=user.email,
-        phone=user.phone,
-        password=hashed_password
+        phone=user.phone
     )
 
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
+    db.add(db_user)
+
+    try:
+        db.commit()
+        db.refresh(db_user)
+
+    except IntegrityError:
+        db.rollback()
+
+        raise HTTPException(
+            status_code=400,
+            detail="用户名、邮箱或手机号已被注册"
+        )
 
     return {
-        "message": "注册成功",
-        "user": {
-            "id": new_user.id,
-            "username": new_user.username,
-            "email": new_user.email,
-            "phone": new_user.phone
-        }
+        "message": "注册成功"
+    }
+
+
+@router.post('/reset-password')
+def reset_password(
+    request: ResetPasswordRequest,
+    db: Session = Depends(get_db)
+):
+    # 1. 查找邮箱对应的用户
+    db_user = (
+        db.query(UserModel)
+        .filter(
+            UserModel.email == request.email
+        )
+        .first()
+    )
+
+    if not db_user:
+        raise HTTPException(
+            status_code=400,
+            detail="该邮箱未注册"
+        )
+
+    # 2. 验证验证码
+    verify_result = verify_code(
+        db=db,
+        target=request.email,
+        code=request.code,
+        code_type="reset_password"
+    )
+
+    if verify_result == "expired":
+        raise HTTPException(
+            status_code=400,
+            detail="验证码已过期，请重新获取"
+        )
+
+    if verify_result == "invalid":
+        raise HTTPException(
+            status_code=400,
+            detail="验证码错误，请重新输入"
+        )
+
+    # 3. 修改密码
+    db_user.password = hash_password(
+        request.password
+    )
+
+    db.commit()
+
+    return {
+        "message": "密码修改成功"
     }
 
 

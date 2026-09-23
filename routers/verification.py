@@ -15,6 +15,8 @@ from utils.notification import (
     send_phone_code
 )
 
+from models.user import  User as UserModel
+
 
 router = APIRouter()
 
@@ -81,3 +83,54 @@ def send_code(
     return {
         "message": "验证码发送成功"
     }
+
+
+@router.post("/send-reset-code")
+def send_reset_code(
+    email: str,
+    db: Session = Depends(get_db)
+):
+    # 检查邮箱是否已经注册
+    user = (
+        db.query(UserModel)
+        .filter(UserModel.email == email)
+        .first()
+    )
+
+    if not user:
+        raise HTTPException(
+            status_code=400,
+            detail="该邮箱未注册"
+        )
+
+    try:
+        code = create_verification_code(
+            db=db,
+            target=email,
+            code_type="reset_password"
+        )
+
+        send_email_code(
+            email,
+            code
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=429,
+            detail=str(e)
+        )
+
+    except Exception as e:
+        print(f"找回密码验证码发送失败：{e}")
+
+        raise HTTPException(
+            status_code=500,
+            detail="验证码发送失败，请稍后重试"
+        )
+
+    return {
+        "message": "验证码发送成功"
+    }
+
+

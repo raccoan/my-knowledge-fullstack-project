@@ -34,3 +34,11 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     username: str
     password: str
+
+
+class ResetPasswordRequest(BaseModel):
+    email: str
+    code: str = Field(min_length=6, max_length=6)
+    password: str = Field(min_length=6, max_length=100)
+
+
