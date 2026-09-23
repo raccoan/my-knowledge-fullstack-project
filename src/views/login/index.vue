@@ -44,6 +44,12 @@
         >
           登录
         </a-button>
+        <div class="register-link">
+          还没有账号？
+          <span @click="router.push('/register')">
+            立即注册
+          </span>
+        </div>
 
       </a-form>
 
@@ -337,6 +343,17 @@ const handleLogin = async () => {
   .subtitle {
     margin-bottom: 26px;
   }
+}
+.register-link {
+  margin-top: 16px;
+  text-align: center;
+  color: #8c8c8c;
+}
+
+.register-link span {
+  margin-left: 4px;
+  color: #1677ff;
+  cursor: pointer;
 }
 </style>
 ```

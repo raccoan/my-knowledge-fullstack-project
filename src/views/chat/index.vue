@@ -1024,26 +1024,7 @@ onMounted(()=>{
           </div>
         </a-card>
 
-        <!-- AI 模拟面试 -->
-        <a-card
-          size="small"
-          :bordered="false"
-          class="feature-card interview-card"
-          hoverable
-          @click="router.push('/interview')"
-        >
-          <a-space>
-            <AimOutlined />
 
-            <span>
-              AI 模拟面试
-            </span>
-          </a-space>
-
-          <div class="feature-description">
-            根据你的真实简历进行针对性面试
-          </div>
-        </a-card>
 
         <div class="sider-tip">
           AI 会优先根据你的知识库内容回答问题。
@@ -1614,7 +1595,7 @@ onMounted(()=>{
 }
 
 .feature-description {
-  margin-top: 6px;
+  margin-top: 2px;
   color: #86909c;
   font-size: 11px;
   line-height: 1.55;
