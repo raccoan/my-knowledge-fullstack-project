@@ -1189,55 +1189,88 @@ onMounted(async () => {
   </div>
 </template>
 
-
+```css
 <style scoped>
 /* =========================
-   页面
+   Page
 ========================= */
 
 .resume-page {
   height: 100%;
+  min-height: 0;
+
   display: flex;
   flex-direction: column;
-  background: #f5f5f5;
+
+  background: #f7f8fa;
+  color: #1f2329;
 }
 
-
 /* =========================
-   顶部
+   Header
 ========================= */
 
 .page-header {
-  min-height: 72px;
-  padding: 0 24px;
+  min-height: 64px;
+  padding: 0 28px;
 
   display: flex;
   align-items: center;
   justify-content: space-between;
 
-  background: #fff;
-  border-bottom: 1px solid #f0f0f0;
+  flex-shrink: 0;
+
+  background: #ffffff;
+  border-bottom: 1px solid #e8eaed;
 }
 
 .page-title {
-  font-size: 18px;
+  color: #1f2329;
+  font-size: 16px;
+  line-height: 22px;
   font-weight: 600;
 }
 
 .page-subtitle {
-  margin-top: 4px;
-  color: #999;
-  font-size: 13px;
+  margin-top: 3px;
+
+  color: #86909c;
+  font-size: 12px;
+  line-height: 18px;
 }
 
 .header-actions {
   display: flex;
-  gap: 12px;
+  align-items: center;
+  gap: 8px;
 }
 
+.header-actions :deep(.ant-btn) {
+  height: 34px;
+  padding: 0 13px;
+
+  border-radius: 7px;
+
+  font-size: 12px;
+}
+
+.header-actions :deep(.ant-btn-primary) {
+  box-shadow: 0 2px 6px rgb(22 119 255 / 12%);
+}
+
+.header-actions :deep(.ant-btn-primary:not(:first-child)) {
+  background: #ffffff;
+  color: #1677ff;
+  border-color: #91bfff;
+  box-shadow: none;
+}
+
+.header-actions :deep(.ant-btn-primary:not(:first-child):hover) {
+  background: #f2f7ff;
+}
 
 /* =========================
-   简历主体
+   Main Content
 ========================= */
 
 .resume-content {
@@ -1247,141 +1280,453 @@ onMounted(async () => {
   display: flex;
   gap: 16px;
 
-  padding: 16px;
+  padding: 20px 24px;
 
   overflow: hidden;
 }
 
-
 /* =========================
-   左侧简历列表
+   Resume Sidebar
 ========================= */
 
 .resume-sidebar {
   width: 240px;
   flex-shrink: 0;
 
-  padding: 16px;
-
-  background: #fff;
-  border-radius: 10px;
+  padding: 16px 12px;
 
   overflow-y: auto;
+
+  background: #ffffff;
+  border: 1px solid #edf0f3;
+  border-radius: 12px;
+
+  box-shadow: 0 2px 8px rgb(31 35 41 / 3%);
+}
+
+.resume-sidebar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.resume-sidebar::-webkit-scrollbar-thumb {
+  border-radius: 5px;
+  background: #d9dce1;
+}
+
+.resume-sidebar::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .sidebar-title {
-  margin-bottom: 12px;
+  padding: 0 8px;
+  margin-bottom: 10px;
+
+  color: #1f2329;
+  font-size: 13px;
   font-weight: 600;
 }
 
+.resume-sidebar :deep(.ant-list) {
+  background: transparent;
+}
+
+.resume-sidebar :deep(.ant-list-item) {
+  border: none;
+}
+
+/* =========================
+   Resume Item
+========================= */
+
 .resume-item {
+  position: relative;
+
   display: block;
-  padding: 12px !important;
+
+  padding: 10px 10px !important;
+  margin-bottom: 3px;
 
   cursor: pointer;
 
-  border-radius: 6px;
+  border: none !important;
+  border-radius: 8px;
+
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease;
 }
 
 .resume-item:hover {
-  background: #f5f5f5;
+  background: #f2f5f9;
 }
 
 .resume-item.active {
-  background: #e6f4ff;
+  background: #e8f3ff;
+}
+
+.resume-item.active::before {
+  content: '';
+
+  position: absolute;
+  left: 0;
+  top: 9px;
+  bottom: 9px;
+
+  width: 3px;
+
+  background: #1677ff;
+  border-radius: 0 3px 3px 0;
 }
 
 .resume-item-name {
   overflow: hidden;
+
+  color: #4e5969;
+  font-size: 12px;
+  line-height: 20px;
+  font-weight: 500;
+
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.resume-item-time {
-  margin-top: 4px;
-  color: #999;
-  font-size: 12px;
+.resume-item.active .resume-item-name {
+  color: #1677ff;
+  font-weight: 600;
 }
 
+.resume-item-time {
+  margin-top: 2px;
+
+  color: #a9aeb8;
+  font-size: 10px;
+  line-height: 16px;
+}
 
 /* =========================
-   右侧简历
+   Resume Detail
 ========================= */
 
 .resume-detail {
   flex: 1;
   min-width: 0;
 
+  padding-right: 2px;
+
   overflow-y: auto;
 }
 
+.resume-detail::-webkit-scrollbar {
+  width: 6px;
+}
+
+.resume-detail::-webkit-scrollbar-thumb {
+  border-radius: 6px;
+  background: #d9dce1;
+}
+
+.resume-detail::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* =========================
+   Resume Title
+========================= */
+
 .resume-title-row {
+  min-height: 72px;
+
   margin-bottom: 16px;
-  padding: 20px 24px;
+  padding: 16px 20px;
 
   display: flex;
   align-items: center;
   justify-content: space-between;
 
-  background: #fff;
-  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid #edf0f3;
+  border-radius: 12px;
+
+  box-shadow: 0 2px 8px rgb(31 35 41 / 3%);
 }
 
 .resume-title {
-  margin-bottom: 8px;
+  max-width: 600px;
 
-  font-size: 18px;
+  margin-bottom: 6px;
+
+  overflow: hidden;
+
+  color: #1f2329;
+  font-size: 15px;
+  line-height: 22px;
   font-weight: 600;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+
+.resume-title-row :deep(.ant-tag) {
+  margin: 0;
+
+  border-radius: 10px;
+
+  font-size: 10px;
+  line-height: 19px;
+}
+
+.resume-title-row > :deep(.ant-btn) {
+  height: 34px;
+  padding: 0 13px;
+
+  flex-shrink: 0;
+
+  border-radius: 7px;
+
+  font-size: 12px;
+
+  box-shadow: 0 2px 6px rgb(22 119 255 / 12%);
+}
+
+/* =========================
+   Resume Sections
+========================= */
 
 .resume-sections {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
+.resume-sections > :deep(.ant-card) {
+  overflow: hidden;
+
+  border: 1px solid #edf0f3 !important;
+  border-radius: 12px !important;
+
+  background: #ffffff;
+
+  box-shadow: 0 2px 8px rgb(31 35 41 / 3%);
+}
+
+.resume-sections > :deep(.ant-card) > .ant-card-head {
+  min-height: 48px;
+  padding: 0 18px;
+
+  border-bottom: 1px solid #f0f1f3;
+}
+
+.resume-sections > :deep(.ant-card) > .ant-card-head .ant-card-head-title {
+  padding: 14px 0;
+
+  color: #1f2329;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.resume-sections > :deep(.ant-card) > .ant-card-body {
+  padding: 18px;
+}
 
 /* =========================
-   标签
+   Basic Information
+========================= */
+
+.resume-sections :deep(.ant-descriptions) {
+  overflow: hidden;
+
+  border-radius: 8px;
+}
+
+.resume-sections :deep(.ant-descriptions-view) {
+  border-color: #edf0f3;
+}
+
+.resume-sections :deep(.ant-descriptions-item-label) {
+  width: 90px;
+
+  color: #86909c;
+  font-size: 12px;
+
+  background: #fafbfc;
+  border-color: #edf0f3;
+}
+
+.resume-sections :deep(.ant-descriptions-item-content) {
+  color: #1f2329;
+  font-size: 12px;
+
+  background: #ffffff;
+  border-color: #edf0f3;
+}
+
+/* =========================
+   Tags
 ========================= */
 
 .tag-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
+.tag-list :deep(.ant-tag) {
+  margin: 0;
+  padding: 2px 9px;
+
+  color: #4e5969;
+  background: #f2f7ff;
+  border-color: #d9eaff;
+  border-radius: 6px;
+
+  font-size: 11px;
+  line-height: 20px;
+}
 
 /* =========================
-   项目
+   Education
 ========================= */
 
-.project-card {
-  margin-bottom: 12px;
+.resume-sections :deep(.ant-list-item) {
+  padding: 12px 0;
+
+  border-color: #f0f1f3;
 }
 
-.project-block {
-  margin-top: 16px;
+.resume-sections :deep(.ant-list-item:last-child) {
+  border-bottom: none;
 }
 
-.block-title {
-  margin-bottom: 8px;
+.resume-sections :deep(.ant-list-item-meta-title) {
+  margin-bottom: 3px !important;
+
+  color: #1f2329;
+  font-size: 13px;
   font-weight: 600;
 }
 
-.time {
-  margin-top: 4px;
-  color: #999;
+.resume-sections :deep(.ant-list-item-meta-description) {
+  color: #86909c;
+  font-size: 11px;
+  line-height: 18px;
 }
 
+/* =========================
+   Project / Internship
+========================= */
+
+.project-card {
+  margin-bottom: 10px !important;
+
+  border: 1px solid #edf0f3 !important;
+  border-radius: 9px !important;
+
+  background: #fafbfc;
+
+  box-shadow: none !important;
+}
+
+.project-card:last-child {
+  margin-bottom: 0 !important;
+}
+
+.project-card :deep(.ant-card-head) {
+  min-height: 42px !important;
+  padding: 0 14px !important;
+
+  border-bottom: 1px solid #f0f1f3 !important;
+}
+
+.project-card :deep(.ant-card-head-title) {
+  padding: 11px 0 !important;
+
+  color: #1f2329;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.project-card :deep(.ant-card-body) {
+  padding: 14px !important;
+}
+
+.project-card p {
+  margin: 0 0 12px;
+
+  color: #4e5969;
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.project-block {
+  margin-top: 14px;
+}
+
+.block-title {
+  position: relative;
+
+  padding-left: 9px;
+  margin-bottom: 7px;
+
+  color: #4e5969;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.block-title::before {
+  content: '';
+
+  position: absolute;
+  left: 0;
+  top: 4px;
+
+  width: 3px;
+  height: 12px;
+
+  background: #1677ff;
+  border-radius: 2px;
+}
+
+.project-block ul,
+.project-card > ul {
+  margin: 0;
+  padding-left: 20px;
+
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.project-block li,
+.project-card > ul li {
+  padding-left: 2px;
+}
+
+.time {
+  margin-top: 3px;
+
+  color: #a9aeb8;
+  font-size: 11px;
+}
 
 /* =========================
-   历史面试
+   Interview History
 ========================= */
 
 .interview-history-card {
   margin-top: 0;
-  border-radius: 10px;
+}
+
+.interview-history-card :deep(.ant-card-extra) {
+  padding: 0;
+}
+
+.interview-history-card :deep(.ant-card-extra .ant-btn) {
+  height: 28px;
+  padding: 0 10px;
+
+  border-radius: 6px;
+
+  font-size: 11px;
 }
 
 .interview-history-list {
@@ -1392,19 +1737,18 @@ onMounted(async () => {
 .interview-history-item {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 18px;
 
-  padding: 16px 0;
+  padding: 13px 0;
 
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid #f0f1f3;
+
+  transition: background-color 0.18s ease;
 }
 
 .interview-history-item:last-child {
   border-bottom: none;
 }
-
-
-/* 历史面试左侧 */
 
 .interview-history-info {
   flex: 1;
@@ -1412,42 +1756,73 @@ onMounted(async () => {
 }
 
 .interview-history-title {
-  color: #262626;
-  font-size: 14px;
+  overflow: hidden;
+
+  color: #1f2329;
+  font-size: 12px;
+  line-height: 20px;
   font-weight: 600;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .interview-history-time {
-  margin-top: 5px;
-  color: #8c8c8c;
-  font-size: 12px;
+  margin-top: 2px;
+
+  color: #a9aeb8;
+  font-size: 10px;
 }
-
-
-/* 分数 */
 
 .interview-history-score {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+
+  flex-shrink: 0;
 }
 
 .score {
   color: #1677ff;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
 }
 
+.interview-history-score :deep(.ant-tag) {
+  margin: 0;
 
-/* 操作 */
+  border-radius: 10px;
+
+  font-size: 10px;
+}
 
 .interview-history-action {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+
   flex-shrink: 0;
 }
 
+.interview-history-action :deep(.ant-btn) {
+  height: 26px;
+  padding: 0 5px;
+
+  border-radius: 5px;
+
+  font-size: 11px;
+}
+
+.interview-history-action :deep(.ant-btn-link:hover) {
+  background: #f2f7ff;
+}
+
+.interview-history-action :deep(.ant-btn-dangerous:hover) {
+  background: #fff2f0;
+}
 
 /* =========================
-   空状态
+   Empty Page
 ========================= */
 
 .empty-page {
@@ -1456,26 +1831,45 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
+
+  padding: 24px;
 }
 
+.empty-page :deep(.ant-empty-description) {
+  color: #a9aeb8;
+  font-size: 12px;
+}
+
+.empty-page :deep(.ant-btn) {
+  height: 34px;
+  padding: 0 14px;
+
+  border-radius: 7px;
+
+  font-size: 12px;
+
+  box-shadow: 0 2px 6px rgb(22 119 255 / 12%);
+}
 
 /* =========================
-   响应式
+   Responsive
 ========================= */
 
 @media (max-width: 992px) {
   .resume-content {
-    padding: 12px;
+    padding: 16px;
   }
 
   .resume-sidebar {
-    width: 200px;
+    width: 210px;
+  }
+
+  .resume-title-row {
+    padding: 16px;
   }
 }
 
-
 @media (max-width: 768px) {
-
   .page-header {
     min-height: auto;
     padding: 12px 16px;
@@ -1483,51 +1877,63 @@ onMounted(async () => {
     align-items: flex-start;
     flex-direction: column;
 
-    gap: 12px;
+    gap: 10px;
   }
-
 
   .header-actions {
     width: 100%;
   }
 
-
-  .header-actions .ant-btn {
+  .header-actions :deep(.ant-btn) {
     flex: 1;
   }
 
-
   .resume-content {
     flex-direction: column;
+
+    padding: 12px;
+
     overflow-y: auto;
   }
 
-
   .resume-sidebar {
     width: 100%;
-    max-height: 180px;
+    max-height: 170px;
+
+    padding: 12px;
   }
 
-
   .resume-detail {
+    padding-right: 0;
+
     overflow-y: visible;
   }
 
-
   .resume-title-row {
-    padding: 16px;
-
     align-items: flex-start;
     flex-direction: column;
-
     gap: 12px;
   }
 
-
-  .resume-title-row .ant-btn {
+  .resume-title-row > :deep(.ant-btn) {
     width: 100%;
   }
 
+  .resume-title {
+    max-width: 100%;
+  }
+
+  .resume-sections > :deep(.ant-card) > .ant-card-body {
+    padding: 14px;
+  }
+
+  .resume-sections :deep(.ant-descriptions) {
+    overflow-x: auto;
+  }
+
+  .resume-sections :deep(.ant-descriptions-view) {
+    min-width: 520px;
+  }
 
   .interview-history-item {
     align-items: flex-start;
@@ -1535,20 +1941,18 @@ onMounted(async () => {
     gap: 8px;
   }
 
-
   .interview-history-score {
     width: 100%;
   }
 
-
   .interview-history-action {
     width: 100%;
+    flex-wrap: wrap;
   }
 
-
-  .interview-history-action .ant-btn {
+  .interview-history-action :deep(.ant-btn) {
     padding-left: 0;
   }
-
 }
 </style>
+```
