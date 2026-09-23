@@ -1069,7 +1069,7 @@ onMounted(()=>{
           </div>
         </div>
 
-        <a-button
+        <!-- <a-button
           type="text"
           :disabled="
             loading ||
@@ -1078,7 +1078,7 @@ onMounted(()=>{
           @click="clearChat"
         >
           清空对话
-        </a-button>
+        </a-button> -->
       </a-layout-header>
 
       <!-- Content -->
@@ -1128,15 +1128,17 @@ onMounted(()=>{
                   item.role === 'assistant',
               }"
             >
-              <!-- 用户头像 -->
+
+              <!-- AI 头像 -->
               <a-avatar
                 v-if="
-                  item.role === 'user'
+                  item.role ===
+                  'assistant'
                 "
-                class="avatar user-avatar"
+                class="avatar assistant-avatar"
               >
                 <template #icon>
-                  <UserOutlined />
+                  <RobotOutlined />
                 </template>
               </a-avatar>
 
@@ -1312,19 +1314,18 @@ onMounted(()=>{
                   </div>
                 </a-card>
               </div>
-
-              <!-- AI 头像 -->
+               <!-- 用户头像 -->
               <a-avatar
                 v-if="
-                  item.role ===
-                  'assistant'
+                  item.role === 'user'
                 "
-                class="avatar assistant-avatar"
+                class="avatar user-avatar"
               >
                 <template #icon>
-                  <RobotOutlined />
+                  <UserOutlined />
                 </template>
               </a-avatar>
+
             </div>
 
             <!-- 停止生成 -->

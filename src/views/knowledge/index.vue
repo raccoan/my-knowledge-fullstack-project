@@ -402,10 +402,52 @@ onMounted(() => {
   </div>
 </template>
 
+```css
 <style scoped>
 .knowledge-page {
+  min-height: 100%;
   padding: 24px;
+
+  background: #f7f8fa;
 }
+
+/* =========================
+   Main Card
+========================= */
+
+.knowledge-page > :deep(.ant-card) {
+  overflow: hidden;
+
+  border: 1px solid #edf0f3 !important;
+  border-radius: 12px !important;
+
+  background: #ffffff;
+
+  box-shadow: 0 2px 8px rgb(31 35 41 / 3%);
+}
+
+.knowledge-page > :deep(.ant-card-head) {
+  min-height: 72px;
+  padding: 0 20px;
+
+  border-bottom: 1px solid #f0f1f3;
+}
+
+.knowledge-page > :deep(.ant-card-head-title) {
+  padding: 16px 0;
+}
+
+.knowledge-page > :deep(.ant-card-extra) {
+  padding: 16px 0;
+}
+
+.knowledge-page > :deep(.ant-card-body) {
+  padding: 0;
+}
+
+/* =========================
+   Page Title
+========================= */
 
 .page-title {
   display: flex;
@@ -413,20 +455,263 @@ onMounted(() => {
 }
 
 .title {
-  font-size: 20px;
+  color: #1f2329;
+  font-size: 16px;
+  line-height: 22px;
   font-weight: 600;
 }
 
 .description {
-  margin-top: 6px;
-  color: #999;
-  font-size: 14px;
+  margin-top: 3px;
+
+  color: #86909c;
+  font-size: 12px;
+  line-height: 18px;
 }
 
-.chunk-title {
-  margin: 24px 0 12px;
-  font-size: 16px;
+/* =========================
+   Header Actions
+========================= */
+
+.knowledge-page > :deep(.ant-card-extra .ant-btn) {
+  height: 34px;
+  padding: 0 12px;
+
+  border-radius: 7px;
+
+  font-size: 12px;
+}
+
+.knowledge-page > :deep(.ant-card-extra .ant-btn-default) {
+  color: #4e5969;
+  border-color: #d9dce1;
+}
+
+.knowledge-page > :deep(.ant-card-extra .ant-btn-default:hover) {
+  color: #1677ff;
+  border-color: #91bfff;
+  background: #f7faff;
+}
+
+.knowledge-page > :deep(.ant-card-extra .ant-btn-primary) {
+  box-shadow: 0 2px 6px rgb(22 119 255 / 12%);
+}
+
+/* =========================
+   Table
+========================= */
+
+.knowledge-page :deep(.ant-table) {
+  color: #1f2329;
+  font-size: 13px;
+}
+
+.knowledge-page :deep(.ant-table-container) {
+  border-radius: 0;
+}
+
+.knowledge-page :deep(.ant-table-thead > tr > th) {
+  padding: 12px 16px;
+
+  color: #86909c;
+  font-size: 12px;
+  font-weight: 500;
+
+  background: #fafbfc;
+  border-bottom: 1px solid #edf0f3;
+}
+
+.knowledge-page :deep(.ant-table-tbody > tr > td) {
+  padding: 14px 16px;
+
+  color: #4e5969;
+
+  border-bottom: 1px solid #f2f3f5;
+
+  transition:
+    background-color 0.18s ease;
+}
+
+.knowledge-page :deep(.ant-table-tbody > tr:last-child > td) {
+  border-bottom: none;
+}
+
+.knowledge-page :deep(.ant-table-tbody > tr:hover > td) {
+  background: #f7faff !important;
+}
+
+/* =========================
+   File Name
+========================= */
+
+.knowledge-page :deep(.ant-table-tbody .ant-space) {
+  max-width: 100%;
+}
+
+.knowledge-page :deep(.ant-table-tbody .anticon-file-pdf) {
+  flex-shrink: 0;
+
+  color: #ff4d4f;
+  font-size: 17px;
+}
+
+.knowledge-page :deep(.ant-table-tbody .ant-space-item:last-child) {
+  min-width: 0;
+}
+
+.knowledge-page :deep(.ant-table-tbody .ant-space-item:last-child span) {
+  display: block;
+
+  overflow: hidden;
+
+  color: #1f2329;
+  font-weight: 500;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* =========================
+   Status
+========================= */
+
+.knowledge-page :deep(.ant-table .ant-tag) {
+  margin: 0;
+
+  border-radius: 10px;
+
+  font-size: 11px;
+  line-height: 20px;
+}
+
+/* =========================
+   Action
+========================= */
+
+.knowledge-page :deep(.ant-table .ant-btn-link) {
+  height: 28px;
+  padding: 0 5px;
+
+  border-radius: 6px;
+
+  font-size: 12px;
+}
+
+.knowledge-page :deep(.ant-table .ant-btn-link:not(.ant-btn-dangerous)) {
+  color: #1677ff;
+}
+
+.knowledge-page :deep(.ant-table .ant-btn-link:not(.ant-btn-dangerous):hover) {
+  background: #f2f7ff;
+}
+
+.knowledge-page :deep(.ant-table .ant-btn-dangerous:hover) {
+  background: #fff2f0;
+}
+
+/* =========================
+   Empty
+========================= */
+
+.knowledge-page :deep(.ant-empty) {
+  padding: 48px 0;
+}
+
+.knowledge-page :deep(.ant-empty-description) {
+  color: #a9aeb8;
+  font-size: 12px;
+}
+
+/* =========================
+   Drawer
+========================= */
+
+.knowledge-page :deep(.ant-drawer-header) {
+  padding: 16px 20px;
+
+  border-bottom: 1px solid #edf0f3;
+}
+
+.knowledge-page :deep(.ant-drawer-title) {
+  color: #1f2329;
+  font-size: 15px;
   font-weight: 600;
+}
+
+.knowledge-page :deep(.ant-drawer-body) {
+  padding: 20px;
+
+  background: #f7f8fa;
+}
+
+/* =========================
+   Description
+========================= */
+
+.knowledge-page :deep(.ant-descriptions) {
+  overflow: hidden;
+
+  border-radius: 10px;
+
+  background: #ffffff;
+}
+
+.knowledge-page :deep(.ant-descriptions-view) {
+  border-color: #edf0f3;
+}
+
+.knowledge-page :deep(.ant-descriptions-item-label) {
+  width: 100px;
+
+  color: #86909c;
+  font-size: 12px;
+
+  background: #fafbfc;
+  border-color: #edf0f3;
+}
+
+.knowledge-page :deep(.ant-descriptions-item-content) {
+  color: #1f2329;
+  font-size: 12px;
+
+  background: #ffffff;
+  border-color: #edf0f3;
+}
+
+/* =========================
+   Chunk Title
+========================= */
+
+.chunk-title {
+  margin: 22px 0 10px;
+
+  color: #1f2329;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+/* =========================
+   Chunk List
+========================= */
+
+.knowledge-page :deep(.ant-list) {
+  overflow: hidden;
+
+  border: 1px solid #edf0f3;
+  border-radius: 10px;
+
+  background: #ffffff;
+}
+
+.knowledge-page :deep(.ant-list-item) {
+  padding: 14px 16px;
+
+  border-color: #f0f1f3;
+}
+
+.knowledge-page :deep(.ant-list-item:last-child) {
+  border-bottom: none;
 }
 
 .chunk-item {
@@ -436,15 +721,113 @@ onMounted(() => {
 .chunk-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-  color: #999;
-  font-size: 12px;
+  gap: 7px;
+
+  margin-bottom: 9px;
+
+  color: #a9aeb8;
+  font-size: 11px;
+}
+
+.chunk-header :deep(.ant-tag) {
+  margin: 0;
+
+  color: #1677ff;
+  background: #f0f7ff;
+  border-color: #d9eaff;
+  border-radius: 5px;
+
+  font-size: 10px;
 }
 
 .chunk-content {
-  line-height: 1.7;
+  color: #4e5969;
+  font-size: 12px;
+  line-height: 1.8;
+
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+/* =========================
+   Loading
+========================= */
+
+.knowledge-page :deep(.ant-spin-container) {
+  min-height: 120px;
+}
+
+/* =========================
+   Responsive
+========================= */
+
+@media (max-width: 992px) {
+  .knowledge-page {
+    padding: 18px;
+  }
+
+  .knowledge-page > :deep(.ant-card-head) {
+    min-height: auto;
+  }
+
+  .knowledge-page > :deep(.ant-card-head-wrapper) {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+  .knowledge-page {
+    padding: 12px;
+  }
+
+  .knowledge-page > :deep(.ant-card-head) {
+    padding: 0 14px;
+  }
+
+  .knowledge-page > :deep(.ant-card-extra) {
+    padding: 12px 0;
+  }
+
+  .knowledge-page > :deep(.ant-card-extra .ant-space) {
+    gap: 6px !important;
+  }
+
+  .knowledge-page > :deep(.ant-card-extra .ant-btn) {
+    padding: 0 9px;
+  }
+
+  .description {
+    max-width: 230px;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /*
+   * 小屏幕下表格允许横向滚动，
+   * 避免文件名、时间、操作区域被强行挤压。
+   */
+  .knowledge-page :deep(.ant-table-wrapper) {
+    overflow-x: auto;
+  }
+
+  .knowledge-page :deep(.ant-table) {
+    min-width: 760px;
+  }
+
+  .knowledge-page :deep(.ant-drawer) {
+    max-width: 100%;
+  }
+
+  .knowledge-page :deep(.ant-drawer-body) {
+    padding: 14px;
+  }
+
+  .knowledge-page :deep(.ant-descriptions-item-label) {
+    width: 90px;
+  }
+}
 </style>
+```
