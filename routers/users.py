@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from starlette.responses import JSONResponse
 
 from database import get_db
-from schemas.user import User, LoginRequest
+from schemas.user import User, LoginRequest,RegisterRequest
 from models.user import User as UserModel
 
 from utils.password import hash_password,verify_password
@@ -131,3 +131,93 @@ def update_user(user_id:int,user:User,db:Session = Depends(get_db)):
     db.commit()
     db.refresh(db_user)
     return JSONResponse({"message":f"{user}update successfully"})
+
+@router.post('/register')
+def register(
+    user: RegisterRequest,
+    db: Session = Depends(get_db)
+):
+    # 1. 检查用户名
+    exist_user = (
+        db.query(UserModel)
+        .filter(
+            UserModel.username == user.username
+        )
+        .first()
+    )
+
+    if exist_user:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "message": "用户名已存在"
+            }
+        )
+
+    # 2. 检查邮箱
+    exist_email = (
+        db.query(UserModel)
+        .filter(
+            UserModel.email == user.email
+        )
+        .first()
+    )
+
+    if exist_email:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "message": "邮箱已被注册"
+            }
+        )
+
+    # 3. 检查手机号
+    exist_phone = (
+        db.query(UserModel)
+        .filter(
+            UserModel.phone == user.phone
+        )
+        .first()
+    )
+
+    if exist_phone:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "message": "手机号已被注册"
+            }
+        )
+
+    # 4. 密码加密
+    hashed_password = hash_password(
+        user.password
+    )
+
+    # 5. 创建用户
+    new_user = UserModel(
+        username=user.username,
+        email=user.email,
+        phone=user.phone,
+        password=hashed_password
+    )
+
+    # 6. 保存数据库
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    # 7. 返回注册结果
+    return JSONResponse(
+        status_code=201,
+        content={
+            "message": "注册成功",
+            "user": {
+                "id": new_user.id,
+                "username": new_user.username,
+                "email": new_user.email,
+                "phone": new_user.phone
+            }
+        }
+    )
+
+

@@ -1,12 +1,29 @@
 # 请求数据模型
+from pydantic import BaseModel, Field
 
-from pydantic import BaseModel
 
 class User(BaseModel):
     username: str
-    age: int
-    password:str
+    password: str
+    age: int | None = None
+
+
+class RegisterRequest(BaseModel):
+    username: str = Field(
+        min_length=3,
+        max_length=50
+    )
+
+    email: str
+
+    phone: str
+
+    password: str = Field(
+        min_length=6,
+        max_length=100
+    )
+
 
 class LoginRequest(BaseModel):
-    username:str
-    password:str
+    username: str
+    password: str
