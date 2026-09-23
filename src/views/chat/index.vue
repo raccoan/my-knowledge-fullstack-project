@@ -48,11 +48,17 @@ import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
 import type { Conversation,ChatMessage } from '@/api/conversations'
+import { Modal } from 'ant-design-vue'
+import {useUserStore} from '@/stores/user'
+
+
+const userStore = useUserStore()
 /**
  * =========================
  * Markdown
  * =========================
  */
+
 const md: any = new MarkdownIt({
   html: false,
   breaks: true,
@@ -750,20 +756,20 @@ const removeConversation = async(
  * 清空聊天
  * =========================
  */
-const clearChat = () => {
-  if (loading.value) {
-    stopGeneration()
-  }
+// const clearChat = () => {
+//   if (loading.value) {
+//     stopGeneration()
+//   }
 
-  messages.value = []
+//   messages.value = []
 
-  showBackToBottom.value =
-    false
+//   showBackToBottom.value =
+//     false
 
-  message.success(
-    '已清空对话',
-  )
-}
+//   message.success(
+//     '已清空对话',
+//   )
+// }
 
 
 
@@ -846,6 +852,26 @@ const switchConversation = async (conversationId:number) => {
   }
 }
 
+// 登出函数
+const handleLogout = () => {
+  Modal.confirm({
+    title:"退出登录",
+    content:"确定要退出当前账号吗？",
+    okText:"退出",
+    cancelText:"取消",
+
+    async onOk() {
+      try{
+        userStore.logout()
+        router.push('/login')
+        message.success("已退出登录")
+      }catch(error){
+        console.error("退出登录失败:",error)
+        message.error("退出登录失败")
+      }
+    },
+  })
+}
 
 
 onMounted(()=>{
@@ -1049,6 +1075,36 @@ onMounted(()=>{
             基于你的个人知识库进行 AI 问答
           </div>
         </div>
+
+        <a-dropdown placement="bottomRight">
+          <div class="user-menu">
+            <span class="username">
+              {{ userStore.user?.username || '用户' }}
+            </span>
+
+            <span class="arrow">
+              ▼
+            </span>
+          </div>
+
+          <template #overlay>
+            <a-menu>
+              <a-menu-item key="user" disabled>
+                当前用户：
+                {{ userStore.user?.username || '用户' }}
+              </a-menu-item>
+
+              <a-menu-divider />
+
+              <a-menu-item
+                key="logout"
+                @click="handleLogout"
+              >
+                退出登录
+              </a-menu-item>
+            </a-menu>
+          </template>
+        </a-dropdown>
 
         <!-- <a-button
           type="text"
@@ -2067,5 +2123,43 @@ onMounted(()=>{
   .input-bottom {
     justify-content: flex-end;
   }
+}
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 6px 10px;
+
+  border-radius: 8px;
+
+  cursor: pointer;
+
+  transition: background 0.2s;
+}
+
+.user-menu:hover {
+  background: #f5f7fa;
+}
+
+.username {
+  max-width: 140px;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+
+  color: #1f2329;
+
+  font-size: 13px;
+
+  font-weight: 500;
+}
+
+.arrow {
+  color: #86909c;
+  font-size: 10px;
 }
 </style>
