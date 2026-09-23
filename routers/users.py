@@ -1,4 +1,4 @@
-from fastapi import APIRouter,Depends
+from fastapi import APIRouter,Depends,HTTPException
 from sqlalchemy.orm import Session
 from starlette.responses import JSONResponse
 
@@ -11,45 +11,12 @@ from utils.password import hash_password,verify_password
 from utils.jwt import create_token
 from utils.auth import  get_current_user
 from utils.verification import verify_code
+
+
 router = APIRouter()
 
 
 # 注册接口
-@router.post('/register')
-def register(
-    user:User,
-    db:Session = Depends(get_db)
-):
-    #查询是否存在该用户
-    exist_user = db.query(UserModel).filter(UserModel.username==user.username).first()
-    if exist_user:
-        return JSONResponse({"message": f"{UserModel.username}已存在"})
-
-    #密码加密
-    hashed_password =  hash_password(user.password)
-
-    # 创建数据库对象
-    new_user = UserModel(
-        username = user.username,
-        age = user.age,
-        password = hashed_password
-                         )
-    # 保存数据库
-    db.add(new_user)
-    db.commit()
-    db.refresh(
-        new_user
-    )
-    return {
-        JSONResponse({"message":"注册成功",
-                    "user":{
-                        "username":new_user.username,
-                        "age":new_user.age
-                    }
-
-
-                      })
-    }
 
 # 登录接口
 @router.post('/login')
@@ -195,17 +162,23 @@ def register(
     # 3. 验证验证码
     # =========================
 
-    verified = verify_code(
+    verify_result = verify_code(
         db=db,
         target=target,
         code=user.code,
         code_type=user.code_type
     )
 
-    if not verified:
+    if verify_result == "expired":
         raise HTTPException(
             status_code=400,
-            detail="验证码错误或已过期"
+            detail="验证码已过期，请重新获取"
+        )
+
+    if verify_result == "invalid":
+        raise HTTPException(
+            status_code=400,
+            detail="验证码错误，请重新输入"
         )
 
     # =========================

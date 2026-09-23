@@ -18,6 +18,10 @@ from models.message import Message
 from models.resume import  Resume
 from models.interview_message import  InterviewMessage
 from models.interview import Interview
+import os
+from dotenv import load_dotenv
+
+
 
 app = FastAPI()
 
@@ -45,3 +49,12 @@ app.include_router(chat.router)
 app.include_router(conversations.router)
 app.include_router(resumes.router)
 app.include_router(interviews.router)
+
+load_dotenv()
+
+print("SMTP_HOST:", os.getenv("SMTP_HOST"))
+print("SMTP_USERNAME:", os.getenv("SMTP_USERNAME"))
+print(
+    "SMTP_PASSWORD:",
+    "已读取" if os.getenv("SMTP_PASSWORD") else "未读取"
+)

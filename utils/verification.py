@@ -1,4 +1,3 @@
-# 验证码生成工具
 import random
 from datetime import datetime, timedelta
 
@@ -23,7 +22,6 @@ def create_verification_code(
     创建验证码
     """
 
-    # 查询最近发送的验证码
     latest_code = (
         db.query(VerificationCode)
         .filter(
@@ -78,13 +76,17 @@ def verify_code(
 ):
     """
     验证验证码
+
+    返回：
+    success  -> 验证成功
+    expired  -> 验证码已过期
+    invalid  -> 验证码错误
     """
 
     verification_code = (
         db.query(VerificationCode)
         .filter(
             VerificationCode.target == target,
-            VerificationCode.code == code,
             VerificationCode.type == code_type
         )
         .order_by(
@@ -93,17 +95,20 @@ def verify_code(
         .first()
     )
 
+    # 没有发送过验证码
     if not verification_code:
-        return False
+        return "invalid"
 
-    if (
-        verification_code.expires_at
-        < datetime.now()
-    ):
-        return False
+    # 先判断是否过期
+    if verification_code.expires_at < datetime.now():
+        return "expired"
+
+    # 再判断验证码是否正确
+    if verification_code.code != code:
+        return "invalid"
 
     # 验证成功后删除验证码
     db.delete(verification_code)
     db.commit()
 
-    return True
+    return "success"

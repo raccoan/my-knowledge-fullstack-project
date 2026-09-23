@@ -1,8 +1,19 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException
+)
+
 from sqlalchemy.orm import Session
 
 from database import get_db
-from utils.verification import create_verification_code
+from utils.verification import (
+    create_verification_code
+)
+from utils.notification import (
+    send_email_code,
+    send_phone_code
+)
 
 
 router = APIRouter()
@@ -32,19 +43,40 @@ def send_code(
             target,
             code_type
         )
+
+        if code_type == "email":
+            send_email_code(
+                target,
+                code
+            )
+
+        else:
+            send_phone_code(
+                target,
+                code
+            )
+
     except ValueError as e:
         raise HTTPException(
             status_code=429,
             detail=str(e)
         )
 
-    # 目前先打印验证码
-    # 后续这里替换成真正的邮箱/短信发送
-    print(
-        f"[验证码] type={code_type}, "
-        f"target={target}, "
-        f"code={code}"
-    )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=429,
+            detail=str(e)
+        )
+
+    except Exception as e:
+        print(
+            f"验证码发送失败：{e}"
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail="验证码发送失败，请稍后重试"
+        )
 
     return {
         "message": "验证码发送成功"
