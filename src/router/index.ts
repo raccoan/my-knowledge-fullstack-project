@@ -17,6 +17,11 @@ const router = createRouter({
       component: () =>
         import('@/views/register/index.vue')
     },
+    {
+      path: '/forgot-password',
+      component: () =>
+        import('@/views/forgot-password/index.vue')
+    },
 
     {
       path: '/chat',

@@ -21,10 +21,17 @@ request.interceptors.response.use(
   },
 
   (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token')
+    console.log('Axios 请求失败:', error)
+    console.log('请求地址:', error.config?.url)
+    console.log('状态码:', error.response?.status)
+    console.log('后端返回:', error.response?.data)
 
-      window.location.href = '/login'
+    if (
+      error.response?.status === 401 &&
+      !error.config?.url?.includes('/login')
+    ) {
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
     }
 
     return Promise.reject(error)

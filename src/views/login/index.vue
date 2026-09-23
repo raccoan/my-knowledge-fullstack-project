@@ -34,6 +34,11 @@
             placeholder="请输入密码"
           />
         </a-form-item>
+        <div class="forgot-password">
+          <span @click="router.push('/forgot-password')">
+            忘记密码？
+          </span>
+        </div>
 
         <a-button
           type="primary"
@@ -68,6 +73,7 @@ const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 
+
 const loading = ref(false)
 
 const form = reactive({
@@ -80,19 +86,13 @@ if (typeof route.query.username === 'string') {
   form.username = route.query.username
 }
 
-const handleLogin = async () => {
-  if (!form.username.trim()) {
-    message.warning('请输入用户名')
-    return
-  }
-
-  if (!form.password) {
-    message.warning('请输入密码')
-    return
-  }
-
+async function handleLogin() {
   try {
     loading.value = true
+
+    // 登录前清除旧的登录状态
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
 
     await userStore.login(
       form.username,
@@ -101,23 +101,26 @@ const handleLogin = async () => {
 
     message.success('登录成功')
 
-    await router.push('/chat')
+    router.push('/chat')
 
-  } catch (error: any) {
+} catch (error: any) {
+  console.log('========== 登录失败 ==========')
+  console.log('error:', error)
+  console.log('response:', error.response)
+  console.log('data:', error.response?.data)
+  console.log('detail:', error.response?.data?.detail)
 
-    console.error('登录失败：', error)
-
-    const errorMessage =
-      error?.response?.data?.detail ||
-      error?.response?.data?.message ||
-      '登录失败，请检查用户名和密码'
-
-    message.error(errorMessage)
-
-  } finally {
+  message.error(
+    error.response?.data?.detail ||
+    error.response?.data?.message ||
+    '用户名或密码错误'
+  )
+} finally {
     loading.value = false
   }
 }
+
+
 </script>
 
 ```css
@@ -358,6 +361,17 @@ const handleLogin = async () => {
 
 .register-link span {
   margin-left: 4px;
+  color: #1677ff;
+  cursor: pointer;
+}
+
+.forgot-password {
+  margin-top: -12px;
+  margin-bottom: 20px;
+  text-align: right;
+}
+
+.forgot-password span {
   color: #1677ff;
   cursor: pointer;
 }

@@ -49,18 +49,14 @@ export const useUserStore = defineStore(
     },
 
     actions: {
-      async login(
-        username: string,
-        password: string
-      ) {
-        const response =
-          await request.post<LoginResponse>(
-            '/login',
-            {
-              username,
-              password,
-            }
-          )
+      async login(username: string, password: string) {
+        const response = await request.post<LoginResponse>(
+          '/login',
+          {
+            username,
+            password
+          }
+        )
 
         this.token = response.data.token
 
@@ -73,9 +69,7 @@ export const useUserStore = defineStore(
 
         localStorage.setItem(
           'user',
-          JSON.stringify(
-            response.data.user
-          )
+          JSON.stringify(response.data.user)
         )
 
         return response.data
