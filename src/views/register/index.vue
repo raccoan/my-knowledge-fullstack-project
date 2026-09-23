@@ -352,17 +352,32 @@ async function handleRegister() {
     message.success(
       response.data.message || '注册成功'
     )
+    router.push({
+      path:'/login',
+      query:{
+        username:form.username
+      }
+    })
 
     router.push('/login')
+
   } catch (error: any) {
-    message.error(
+    console.log('注册失败:', error)
+    console.log('后端返回:', error.response?.data)
+
+    const errorMessage =
       error.response?.data?.detail ||
-      '注册失败'
-    )
+      error.response?.data?.message ||
+      '注册失败，请稍后重试'
+
+    message.error(errorMessage)
+
   } finally {
     registering.value = false
   }
 }
+
+
 </script>
 
 <style scoped>

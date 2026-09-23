@@ -60,11 +60,12 @@
 
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter,useRoute} from 'vue-router'
 import { message } from 'ant-design-vue'
 import { useUserStore } from '../../stores/user'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 
 const loading = ref(false)
@@ -72,7 +73,12 @@ const loading = ref(false)
 const form = reactive({
   username: '',
   password: '',
+
 })
+
+if (typeof route.query.username === 'string') {
+  form.username = route.query.username
+}
 
 const handleLogin = async () => {
   if (!form.username.trim()) {
