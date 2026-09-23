@@ -72,9 +72,16 @@ def login(
         "username":db_user.username
     })
 
-    return{"message":"登录成功",
-            "token":token
-           }
+    return {
+        "message": "登录成功",
+        "token": token,
+        "user": {
+            "id": db_user.id,
+            "username": db_user.username,
+            "email": db_user.email,
+            "phone": db_user.phone
+        }
+    }
 
 
 
