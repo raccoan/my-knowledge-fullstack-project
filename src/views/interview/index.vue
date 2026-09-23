@@ -1,3 +1,434 @@
+<script setup lang="ts">
+import {
+  computed,
+  onMounted,
+  ref
+} from 'vue'
+
+import {
+  useRoute,
+  useRouter
+} from 'vue-router'
+
+import {
+  ArrowLeftOutlined,
+  SendOutlined,
+  DownOutlined,
+  CheckCircleOutlined,
+  ExclamationCircleOutlined,
+  BookOutlined,
+  BulbOutlined
+} from '@ant-design/icons-vue'
+
+import {
+  message as antMessage
+} from 'ant-design-vue'
+
+import {
+  createInterview,
+  answerInterview,
+  getInterview,
+  getInterviewReport,
+
+} from '@/api/interviews'
+
+import type {
+  InterviewMessage,
+  InterviewReport
+} from '@/api/interviews'
+
+const route = useRoute()
+const router = useRouter()
+
+/**
+ * 当前面试 ID
+ */
+const interviewId = ref<number | null>(null)
+
+/**
+ * 当前问题
+ */
+const question = ref('')
+
+/**
+ * 用户回答
+ */
+const answer = ref('')
+
+/**
+ * 面试消息
+ */
+const messages = ref<InterviewMessage[]>([])
+
+/**
+ * 是否提交中
+ */
+const submitting = ref(false)
+
+/**
+ * 是否结束
+ */
+const finished = ref(false)
+
+/**
+ * 面试报告
+ */
+const report = ref<InterviewReport | null>(null)
+
+/**
+ * 报告加载状态
+ */
+const reportLoading = ref(false)
+
+/**
+ * 每道题参考答案是否展开
+ */
+const showReferenceAnswers =
+  ref<Record<number, boolean>>({})
+
+/**
+ * 面试题数量
+ */
+const questionCount = computed(() => {
+  return messages.value.filter(
+    item => item.role === 'interviewer'
+  ).length
+})
+
+/**
+ * 返回首页
+ */
+const goBack = () => {
+  router.push('/chat')
+}
+
+/**
+ * 返回简历
+ */
+const goResume = () => {
+  router.push('/resume')
+}
+
+/**
+ * 获取题目编号
+ */
+const getQuestionNumber = (
+  index: number
+) => {
+  return messages.value
+    .slice(0, index + 1)
+    .filter(
+      item => item.role === 'interviewer'
+    )
+    .length
+}
+
+/**
+ * 切换参考答案
+ */
+const toggleReferenceAnswer = (
+  messageId: number
+) => {
+  showReferenceAnswers.value[
+    messageId
+  ] =
+    !showReferenceAnswers.value[
+      messageId
+    ]
+}
+
+/**
+ * 根据分数返回颜色
+ */
+const getScoreColor = (
+  score: number
+) => {
+  if (score >= 90) {
+    return 'success'
+  }
+
+  if (score >= 80) {
+    return 'processing'
+  }
+
+  if (score >= 60) {
+    return 'warning'
+  }
+
+  return 'error'
+}
+
+/**
+ * 加载面试详情
+ */
+const loadInterview = async (
+  id: number
+) => {
+  try {
+    submitting.value = true
+
+    const data = await getInterview(id)
+
+    interviewId.value = data.id
+
+    messages.value =
+      data.messages || []
+
+    finished.value =
+      data.status === 'finished'
+
+    /**
+     * 当前问题
+     *
+     * 已结束的面试没有当前问题
+     */
+    question.value =
+      data.current_question || ''
+
+    /**
+     * 如果面试已经结束，
+     * 从后端加载报告
+     */
+    if (finished.value) {
+      await loadInterviewReport()
+    }
+  } catch (error) {
+    console.error(
+      '加载面试失败:',
+      error
+    )
+
+    antMessage.error(
+      '加载面试失败'
+    )
+  } finally {
+    submitting.value = false
+  }
+}
+
+/**
+ * 加载面试报告
+ */
+const loadInterviewReport = async () => {
+  if (!interviewId.value) {
+    return
+  }
+
+  reportLoading.value = true
+
+  try {
+    const data =
+      await getInterviewReport(
+        interviewId.value
+      )
+
+    /**
+     * 后端当前接口直接返回 report JSON
+     *
+     * 为了兼容之前可能存在的：
+     * { report: {...} }
+     *
+     * 这里同时处理两种情况。
+     */
+    report.value =
+      (data as any)?.report ||
+      data
+  } catch (error) {
+    console.error(
+      '获取面试报告失败:',
+      error
+    )
+
+    antMessage.error(
+      '获取面试报告失败'
+    )
+  } finally {
+    reportLoading.value = false
+  }
+}
+
+/**
+ * 开始新的面试
+ */
+const startInterview = async () => {
+  const resumeId = Number(
+    route.query.resumeId
+  )
+
+  if (!resumeId) {
+    antMessage.error(
+      '缺少简历 ID'
+    )
+
+    return
+  }
+
+  try {
+    submitting.value = true
+
+    const data =
+      await createInterview(
+        resumeId
+      )
+
+    interviewId.value = data.id
+
+    /**
+     * 创建成功以后，
+     * URL 变成：
+     *
+     * /interview?id=xxx
+     */
+    await router.replace({
+      path: '/interview',
+      query: {
+        id: String(data.id)
+      }
+    })
+
+    /**
+     * 直接重新从数据库读取，
+     * 不再手动制造临时消息。
+     */
+    await loadInterview(data.id)
+
+    antMessage.success(
+      '面试开始'
+    )
+  } catch (error) {
+    console.error(
+      '创建面试失败:',
+      error
+    )
+
+    antMessage.error(
+      '创建面试失败'
+    )
+  } finally {
+    submitting.value = false
+  }
+}
+
+/**
+ * 提交回答
+ */
+const submitAnswer = async () => {
+
+  if (!interviewId.value) {
+    antMessage.error(
+      '当前面试不存在'
+    )
+
+    return
+  }
+
+
+  const currentAnswer =
+    answer.value.trim()
+
+
+  if (!currentAnswer) {
+    antMessage.warning(
+      '请输入回答内容'
+    )
+
+    return
+  }
+
+
+  try {
+
+    submitting.value = true
+
+
+    const data =
+      await answerInterview(
+        interviewId.value,
+        currentAnswer
+      )
+
+
+    answer.value = ''
+
+
+    await loadInterview(
+      interviewId.value
+    )
+
+
+    if (data.finished) {
+
+      finished.value = true
+
+      question.value = ''
+
+      await loadInterviewReport()
+
+      antMessage.success(
+        '本次面试已完成'
+      )
+
+      return
+
+    }
+
+
+  } catch(error){
+
+    console.error(
+      '提交回答失败:',
+      error
+    )
+
+
+    antMessage.error(
+      '提交回答失败，请稍后重试'
+    )
+
+  } finally {
+
+    submitting.value=false
+
+  }
+
+}
+
+/**
+ * 页面初始化
+ *
+ * 两种情况：
+ *
+ * 1. /interview?resumeId=1
+ *    开始新面试
+ *
+ * 2. /interview?id=12
+ *    加载历史面试
+ */
+onMounted(async () => {
+  const id = Number(
+    route.query.id
+  )
+
+  const resumeId = Number(
+    route.query.resumeId
+  )
+
+  if (id) {
+    await loadInterview(id)
+    return
+  }
+
+  if (resumeId) {
+    await startInterview()
+    return
+  }
+
+  antMessage.error(
+    '缺少面试参数'
+  )
+})
+</script>
+
 
 <template>
   <div class="interview-page">
@@ -693,437 +1124,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import {
-  computed,
-  onMounted,
-  ref
-} from 'vue'
-
-import {
-  useRoute,
-  useRouter
-} from 'vue-router'
-
-import {
-  ArrowLeftOutlined,
-  SendOutlined,
-  DownOutlined,
-  CheckCircleOutlined,
-  ExclamationCircleOutlined,
-  BookOutlined,
-  BulbOutlined
-} from '@ant-design/icons-vue'
-
-import {
-  message as antMessage
-} from 'ant-design-vue'
-
-import {
-  createInterview,
-  answerInterview,
-  getInterview,
-  getInterviewReport,
-
-} from '@/api/interviews'
-
-import type {
-  InterviewMessage,
-  InterviewReport
-} from '@/api/interviews'
-
-const route = useRoute()
-const router = useRouter()
-
-/**
- * 当前面试 ID
- */
-const interviewId = ref<number | null>(null)
-
-/**
- * 当前问题
- */
-const question = ref('')
-
-/**
- * 用户回答
- */
-const answer = ref('')
-
-/**
- * 面试消息
- */
-const messages = ref<InterviewMessage[]>([])
-
-/**
- * 是否提交中
- */
-const submitting = ref(false)
-
-/**
- * 是否结束
- */
-const finished = ref(false)
-
-/**
- * 面试报告
- */
-const report = ref<InterviewReport | null>(null)
-
-/**
- * 报告加载状态
- */
-const reportLoading = ref(false)
-
-/**
- * 每道题参考答案是否展开
- */
-const showReferenceAnswers =
-  ref<Record<number, boolean>>({})
-
-/**
- * 面试题数量
- */
-const questionCount = computed(() => {
-  return messages.value.filter(
-    item => item.role === 'interviewer'
-  ).length
-})
-
-/**
- * 返回首页
- */
-const goBack = () => {
-  router.push('/chat')
-}
-
-/**
- * 返回简历
- */
-const goResume = () => {
-  router.push('/resume')
-}
-
-/**
- * 获取题目编号
- */
-const getQuestionNumber = (
-  index: number
-) => {
-  return messages.value
-    .slice(0, index + 1)
-    .filter(
-      item => item.role === 'interviewer'
-    )
-    .length
-}
-
-/**
- * 切换参考答案
- */
-const toggleReferenceAnswer = (
-  messageId: number
-) => {
-  showReferenceAnswers.value[
-    messageId
-  ] =
-    !showReferenceAnswers.value[
-      messageId
-    ]
-}
-
-/**
- * 根据分数返回颜色
- */
-const getScoreColor = (
-  score: number
-) => {
-  if (score >= 90) {
-    return 'success'
-  }
-
-  if (score >= 80) {
-    return 'processing'
-  }
-
-  if (score >= 60) {
-    return 'warning'
-  }
-
-  return 'error'
-}
-
-/**
- * 加载面试详情
- */
-const loadInterview = async (
-  id: number
-) => {
-  try {
-    submitting.value = true
-
-    const data = await getInterview(id)
-
-    interviewId.value = data.id
-
-    messages.value =
-      data.messages || []
-
-    finished.value =
-      data.status === 'finished'
-
-    /**
-     * 当前问题
-     *
-     * 已结束的面试没有当前问题
-     */
-    question.value =
-      data.current_question || ''
-
-    /**
-     * 如果面试已经结束，
-     * 从后端加载报告
-     */
-    if (finished.value) {
-      await loadInterviewReport()
-    }
-  } catch (error) {
-    console.error(
-      '加载面试失败:',
-      error
-    )
-
-    antMessage.error(
-      '加载面试失败'
-    )
-  } finally {
-    submitting.value = false
-  }
-}
-
-/**
- * 加载面试报告
- */
-const loadInterviewReport = async () => {
-  if (!interviewId.value) {
-    return
-  }
-
-  reportLoading.value = true
-
-  try {
-    const data =
-      await getInterviewReport(
-        interviewId.value
-      )
-
-    /**
-     * 后端当前接口直接返回 report JSON
-     *
-     * 为了兼容之前可能存在的：
-     * { report: {...} }
-     *
-     * 这里同时处理两种情况。
-     */
-    report.value =
-      (data as any)?.report ||
-      data
-  } catch (error) {
-    console.error(
-      '获取面试报告失败:',
-      error
-    )
-
-    antMessage.error(
-      '获取面试报告失败'
-    )
-  } finally {
-    reportLoading.value = false
-  }
-}
-
-/**
- * 开始新的面试
- */
-const startInterview = async () => {
-  const resumeId = Number(
-    route.query.resumeId
-  )
-
-  if (!resumeId) {
-    antMessage.error(
-      '缺少简历 ID'
-    )
-
-    return
-  }
-
-  try {
-    submitting.value = true
-
-    const data =
-      await createInterview(
-        resumeId
-      )
-
-    interviewId.value = data.id
-
-    /**
-     * 创建成功以后，
-     * URL 变成：
-     *
-     * /interview?id=xxx
-     */
-    await router.replace({
-      path: '/interview',
-      query: {
-        id: String(data.id)
-      }
-    })
-
-    /**
-     * 直接重新从数据库读取，
-     * 不再手动制造临时消息。
-     */
-    await loadInterview(data.id)
-
-    antMessage.success(
-      '面试开始'
-    )
-  } catch (error) {
-    console.error(
-      '创建面试失败:',
-      error
-    )
-
-    antMessage.error(
-      '创建面试失败'
-    )
-  } finally {
-    submitting.value = false
-  }
-}
-
-/**
- * 提交回答
- */
-const submitAnswer = async () => {
-
-  if (!interviewId.value) {
-    antMessage.error(
-      '当前面试不存在'
-    )
-
-    return
-  }
-
-
-  const currentAnswer =
-    answer.value.trim()
-
-
-  if (!currentAnswer) {
-    antMessage.warning(
-      '请输入回答内容'
-    )
-
-    return
-  }
-
-
-  try {
-
-    submitting.value = true
-
-
-    const data =
-      await answerInterview(
-        interviewId.value,
-        currentAnswer
-      )
-
-
-    answer.value = ''
-
-
-    await loadInterview(
-      interviewId.value
-    )
-
-
-    if (data.finished) {
-
-      finished.value = true
-
-      question.value = ''
-
-      await loadInterviewReport()
-
-      antMessage.success(
-        '本次面试已完成'
-      )
-
-      return
-
-    }
-
-
-  } catch(error){
-
-    console.error(
-      '提交回答失败:',
-      error
-    )
-
-
-    antMessage.error(
-      '提交回答失败，请稍后重试'
-    )
-
-  } finally {
-
-    submitting.value=false
-
-  }
-
-}
-
-/**
- * 页面初始化
- *
- * 两种情况：
- *
- * 1. /interview?resumeId=1
- *    开始新面试
- *
- * 2. /interview?id=12
- *    加载历史面试
- */
-onMounted(async () => {
-  const id = Number(
-    route.query.id
-  )
-
-  const resumeId = Number(
-    route.query.resumeId
-  )
-
-  if (id) {
-    await loadInterview(id)
-    return
-  }
-
-  if (resumeId) {
-    await startInterview()
-    return
-  }
-
-  antMessage.error(
-    '缺少面试参数'
-  )
-})
-</script>
 
 <style scoped>
 .interview-page {

@@ -1413,80 +1413,219 @@ onMounted(()=>{
 </template>
 
 <style scoped>
+/* =========================
+   页面整体
+   ========================= */
+
 .chat-page {
   height: 100vh;
   overflow: hidden;
+  background: #f7f8fa;
 }
 
 /* =========================
-   左侧
+   左侧 Sidebar
    ========================= */
 
 .chat-sider {
-  background: #fff !important;
-  border-right: 1px solid #f0f0f0;
+  background: #ffffff !important;
+  border-right: 1px solid #e8eaed;
 }
 
 .sider-content {
-  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 20px 14px;
+  overflow-y: auto;
 }
+
+/* 品牌 */
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 20px;
+  gap: 9px;
+  margin: 2px 6px 20px;
+  color: #1f2329;
   font-size: 16px;
   font-weight: 600;
 }
 
+.brand :deep(.anticon) {
+  color: #1677ff;
+  font-size: 19px;
+}
+
+/* 新建对话 */
+
 .new-chat-button {
   height: 40px;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgb(22 119 255 / 12%);
 }
+
+/* 分割线 */
+
+.chat-sider :deep(.ant-divider) {
+  margin: 16px 0;
+  border-color: #f0f1f3;
+}
+
+/* Sidebar 标题 */
 
 .sider-title {
-  margin-bottom: 10px;
-  color: #999;
+  margin: 0 6px 8px;
+  color: #86909c;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* =========================
+   历史会话
+   ========================= */
+
+.conversation-list {
+  margin-bottom: 0;
+}
+
+.conversation-item {
+  display: block;
+  padding: 9px 10px !important;
+  border: none !important;
+  border-radius: 8px;
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.conversation-item:hover {
+  background: #f2f5f9;
+}
+
+.conversation-item-active {
+  background: #e8f3ff;
+}
+
+.conversation-item-active:hover {
+  background: #e8f3ff;
+}
+
+.conversation-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  color: #4e5969;
   font-size: 13px;
+  line-height: 20px;
 }
 
-.knowledge-card {
-  background: #f5f5f5;
+.conversation-title > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.resume-card {
-  background: #f5f5f5;
+.conversation-title .ant-input {
+  border-radius: 6px;
 }
 
-.interview-card {
-  background: #f5f5f5;
+.conversation-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-shrink: 0;
+  gap: 2px;
+  margin-left: 6px;
+  opacity: 0;
+  transition: opacity 0.18s ease;
 }
+
+.conversation-item:hover .conversation-actions,
+.conversation-item-active .conversation-actions {
+  opacity: 1;
+}
+
+.conversation-actions :deep(.ant-btn) {
+  height: 24px;
+  padding: 0 5px;
+  color: #86909c;
+  font-size: 12px;
+}
+
+.conversation-actions :deep(.ant-btn:hover) {
+  color: #1677ff;
+  background: rgb(22 119 255 / 6%);
+}
+
+.conversation-actions :deep(.ant-btn-dangerous:hover) {
+  color: #ff4d4f;
+  background: rgb(255 77 79 / 6%);
+}
+
+.conversation-empty {
+  margin: 16px 0;
+}
+
+/* =========================
+   功能中心
+   ========================= */
 
 .feature-card {
   margin-bottom: 8px;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: 9px;
   cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.feature-card:hover {
-  transform: translateY(-1px);
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    transform 0.18s ease;
 }
 
 .feature-card :deep(.ant-card-body) {
   padding: 12px;
 }
 
-.feature-description {
-  margin-top: 6px;
-  color: #999;
-  font-size: 11px;
-  line-height: 1.5;
+.feature-card:hover {
+  transform: translateY(-1px);
+  border-color: #d9e8fb;
+  background: #f8fbff;
 }
 
+.feature-card .ant-space {
+  color: #1f2329;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.feature-card :deep(.anticon) {
+  color: #1677ff;
+  font-size: 16px;
+}
+
+.knowledge-card,
+.resume-card,
+.interview-card {
+  background: #f7f8fa;
+}
+
+.feature-description {
+  margin-top: 6px;
+  color: #86909c;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+/* Sidebar 提示 */
+
 .sider-tip {
-  margin-top: 16px;
-  color: #999;
-  font-size: 12px;
+  margin: auto 4px 0;
+  padding: 10px 2px 0;
+  color: #a9aeb8;
+  font-size: 11px;
   line-height: 1.6;
 }
 
@@ -1495,18 +1634,18 @@ onMounted(()=>{
    ========================= */
 
 .chat-header {
-  height: 64px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
-  background: #fff;
-  border-bottom: 1px solid #f0f0f0;
-
+  height: 64px;
+  padding: 0 28px;
+  background: #ffffff;
+  border-bottom: 1px solid #e8eaed;
   line-height: normal;
 }
 
 .header-title {
+  color: #1f2329;
   font-size: 16px;
   font-weight: 600;
   line-height: 22px;
@@ -1514,35 +1653,54 @@ onMounted(()=>{
 
 .header-subtitle {
   margin-top: 3px;
-  color: #999;
+  color: #86909c;
   font-size: 12px;
   line-height: 18px;
 }
+
+.chat-header :deep(.ant-btn) {
+  color: #86909c;
+  border-radius: 6px;
+}
+
+.chat-header :deep(.ant-btn:hover) {
+  color: #1677ff;
+  background: #f2f7ff;
+}
+
 /* =========================
    内容区域
    ========================= */
 
 .chat-content {
   position: relative;
-  background: #fafafa;
+  background: #f7f8fa;
 }
 
-/*
- * 真正的滚动容器
- *
- * 注意：
- * chatContainer ref 指向这里的原生 div。
- */
 .chat-scroll-container {
   position: relative;
   height: 100%;
   overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+.chat-scroll-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-scroll-container::-webkit-scrollbar-thumb {
+  border-radius: 6px;
+  background: #d9dce1;
+}
+
+.chat-scroll-container::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .message-container {
   width: min(900px, calc(100% - 48px));
   margin: 0 auto;
-  padding: 32px 0 20px;
+  padding: 32px 0 24px;
 }
 
 /* =========================
@@ -1554,6 +1712,7 @@ onMounted(()=>{
 }
 
 .empty-icon {
+  color: #91bfff;
   font-size: 48px;
 }
 
@@ -1564,7 +1723,7 @@ onMounted(()=>{
 .message-row {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 10px;
   margin-bottom: 24px;
 }
 
@@ -1578,42 +1737,70 @@ onMounted(()=>{
 
 .avatar {
   flex-shrink: 0;
+  width: 32px;
+  height: 32px;
 }
 
 .user-avatar {
   background: #1677ff;
+  box-shadow: 0 2px 6px rgb(22 119 255 / 18%);
 }
 
 .assistant-avatar {
-  background: #722ed1;
+  background: #5b6ee1;
+  box-shadow: 0 2px 6px rgb(91 110 225 / 16%);
 }
 
 .message-main {
-  max-width: calc(100% - 50px);
+  max-width: calc(100% - 44px);
 }
 
 .user-main {
   display: flex;
   justify-content: flex-end;
+  max-width: min(72%, calc(100% - 44px));
 }
 
+/* =========================
+   用户消息
+   ========================= */
+
 .user-message {
-  background: #e6f4ff;
+  border: none;
+  border-radius: 12px;
+  background: #1677ff;
+  box-shadow: 0 2px 6px rgb(22 119 255 / 10%);
+}
+
+.user-message :deep(.ant-card-body) {
+  padding: 10px 14px;
 }
 
 .user-content {
+  color: #ffffff;
   white-space: pre-wrap;
   line-height: 1.7;
 }
 
+/* =========================
+   AI 消息
+   ========================= */
+
 .assistant-message {
   width: 100%;
-  background: #fff;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 4%);
+  border: 1px solid #edf0f3;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgb(31 35 41 / 3%);
+}
+
+.assistant-message :deep(.ant-card-body) {
+  padding: 16px 18px;
 }
 
 .assistant-content {
   min-height: 24px;
+  color: #1f2329;
   line-height: 1.8;
 }
 
@@ -1627,19 +1814,30 @@ onMounted(()=>{
 
 .message-actions {
   margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #f2f3f5;
 }
 
 .message-actions :deep(.ant-btn) {
-  color: #999;
+  height: 28px;
+  padding: 0 8px;
+  color: #86909c;
+  border-radius: 6px;
+  font-size: 12px;
 }
 
 .message-actions :deep(.ant-btn:hover) {
   color: #1677ff;
+  background: #f2f7ff;
 }
 
 /* =========================
    Markdown
    ========================= */
+
+.markdown-body {
+  color: #1f2329;
+}
 
 .markdown-body :deep(p) {
   margin: 0 0 12px;
@@ -1662,7 +1860,9 @@ onMounted(()=>{
   overflow-x: auto;
   margin: 12px 0;
   padding: 14px;
+  border: 1px solid #e8eaed;
   border-radius: 8px;
+  background: #f7f8fa;
 }
 
 .markdown-body :deep(code) {
@@ -1676,62 +1876,96 @@ onMounted(()=>{
 .markdown-body :deep(:not(pre) > code) {
   padding: 2px 5px;
   border-radius: 4px;
-  background: #f5f5f5;
+  background: #f2f3f5;
+  color: #d4380d;
+  font-size: 0.9em;
 }
 
 .markdown-body :deep(blockquote) {
   margin: 12px 0;
-  padding-left: 12px;
-  border-left: 3px solid #d9d9d9;
-  color: #666;
+  padding: 8px 12px;
+  border-left: 3px solid #91bfff;
+  border-radius: 0 6px 6px 0;
+  background: #f7faff;
+  color: #667085;
 }
 
 /* =========================
-   来源
+   RAG 来源
    ========================= */
 
 .source-wrapper {
-  margin-top: 8px;
+  margin-top: 12px;
+}
+
+.source-wrapper :deep(.ant-divider) {
+  margin: 14px 0 12px;
+  border-color: #f0f1f3;
 }
 
 .source-title {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 4px;
-  color: #666;
-  font-size: 13px;
+  margin-bottom: 6px;
+  color: #667085;
+  font-size: 12px;
   font-weight: 500;
+}
+
+.source-title :deep(.anticon) {
+  color: #1677ff;
+}
+
+.source-title :deep(.ant-tag) {
+  margin-left: 2px;
+  border-radius: 10px;
+  font-size: 11px;
 }
 
 .source-collapse {
   margin-top: 4px;
 }
 
+.source-collapse :deep(.ant-collapse-header) {
+  padding: 8px 4px !important;
+  color: #667085 !important;
+  font-size: 12px;
+}
+
 .source-card {
+  border-radius: 8px;
   background: #f7f8fa;
 }
 
-.source-score{
-  color:#999;
-  font-size:12px;
+.source-card :deep(.ant-card-body) {
+  padding: 10px;
+}
+
+.source-score {
+  color: #a9aeb8;
+  font-size: 11px;
 }
 
 .source-content {
-  color: #666;
-  font-size: 13px;
+  color: #667085;
+  font-size: 12px;
   line-height: 1.7;
   white-space: pre-wrap;
 }
 
 /* =========================
-   停止
+   停止生成
    ========================= */
 
 .stop-wrapper {
   display: flex;
   justify-content: center;
   margin: 8px 0 20px;
+}
+
+.stop-wrapper :deep(.ant-btn) {
+  border-radius: 8px;
 }
 
 /* =========================
@@ -1743,38 +1977,75 @@ onMounted(()=>{
   bottom: 20px;
   display: block;
   margin: 0 auto;
-  box-shadow: 0 2px 8px rgb(0 0 0 / 12%);
+  border: 1px solid #e8eaed;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgb(31 35 41 / 10%);
+}
+
+.back-bottom-button:hover {
+  color: #1677ff;
+  border-color: #91bfff;
 }
 
 /* =========================
-   输入框
+   输入区域
    ========================= */
 
 .chat-footer {
-  padding: 16px 24px 20px;
-  background: #fff;
-  border-top: 1px solid #f0f0f0;
+  padding: 14px 24px 18px;
+  background: #ffffff;
+  border-top: 1px solid #e8eaed;
 }
 
 .input-wrapper {
   width: min(900px, 100%);
   margin: 0 auto;
+  padding: 10px 12px 10px;
+  border: 1px solid #d9dce1;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 4px 16px rgb(31 35 41 / 5%);
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.input-wrapper:focus-within {
+  border-color: #91bfff;
+  box-shadow:
+    0 0 0 3px rgb(22 119 255 / 7%),
+    0 4px 16px rgb(31 35 41 / 5%);
 }
 
 .input-wrapper :deep(.ant-input) {
   resize: none;
+  padding: 4px 2px;
+  border: none;
+  box-shadow: none !important;
+}
+
+.input-wrapper :deep(.ant-input::placeholder) {
+  color: #b2b7c2;
 }
 
 .input-bottom {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 8px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #f5f6f7;
 }
 
 .input-tip {
-  color: #999;
-  font-size: 12px;
+  color: #a9aeb8;
+  font-size: 11px;
+}
+
+.input-bottom :deep(.ant-btn) {
+  min-width: 72px;
+  height: 32px;
+  border-radius: 7px;
 }
 
 /* =========================
@@ -1796,10 +2067,14 @@ onMounted(()=>{
   }
 
   .chat-footer {
-    padding: 12px;
+    padding: 10px 12px 12px;
   }
 
   .message-main {
+    max-width: calc(100% - 44px);
+  }
+
+  .user-main {
     max-width: calc(100% - 44px);
   }
 
@@ -1811,37 +2086,4 @@ onMounted(()=>{
     justify-content: flex-end;
   }
 }
-
-.conversation-list {
-  margin-bottom: 12px;
-}
-
-.conversation-item {
-  display: block;
-  padding: 9px 10px !important;
-  border-radius: 6px;
-  cursor: pointer;
-  border-bottom: none !important;
-}
-
-.conversation-item:hover {
-  background: #f5f5f5;
-}
-
-.conversation-item-active {
-  background: #e6f4ff;
-}
-
-.conversation-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: #333;
-  font-size: 13px;
-}
-
-.conversation-empty {
-  margin: 12px 0;
-}
-
 </style>
