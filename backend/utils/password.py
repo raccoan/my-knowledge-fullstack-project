@@ -1,23 +1,30 @@
-from passlib.context import CryptContext
-from sqlalchemy.util import deprecated
+import bcrypt
 
-# 创建密码处理器
-pwd_context = CryptContext(
-    # 算法使用bcrypt算法
-    schemes=["bcrypt"],
-    deprecated="auto"
-)
 
-# 密码加密
-def hash_password(password:str):
-    return pwd_context.hash(password)
+def hash_password(password: str) -> str:
+    password_bytes = password.encode("utf-8")
 
-# 密码验证
+    if len(password_bytes) > 72:
+        raise ValueError("密码长度不能超过72字节")
+
+    hashed = bcrypt.hashpw(
+        password_bytes,
+        bcrypt.gensalt()
+    )
+
+    return hashed.decode("utf-8")
+
+
 def verify_password(
-        plain_password,
-        hashed_password
-):
-    return pwd_context.verify(
-        plain_password,
-        hashed_password
+    plain_password: str,
+    hashed_password: str
+) -> bool:
+    password_bytes = plain_password.encode("utf-8")
+
+    if len(password_bytes) > 72:
+        return False
+
+    return bcrypt.checkpw(
+        password_bytes,
+        hashed_password.encode("utf-8")
     )
