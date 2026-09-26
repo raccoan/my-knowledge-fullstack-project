@@ -6,10 +6,12 @@ from openai import OpenAI
 
 load_dotenv()
 
+api_key = os.getenv("API_KEY")
+base_url = os.getenv("BASE_URL")
 
 client = OpenAI(
-    api_key='da428c912681466e9b9d6e3f092680e3.HRIuqug8tolp4kta',
-    base_url="https://open.bigmodel.cn/api/paas/v4"
+    api_key = api_key,
+    base_url = base_url
 )
 
 
