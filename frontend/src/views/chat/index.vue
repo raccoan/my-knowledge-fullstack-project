@@ -1525,6 +1525,7 @@ onMounted(()=>{
 
 .conversation-list {
   margin-bottom: 0;
+  overflow-y: auto;
 }
 
 .conversation-item {

@@ -213,6 +213,7 @@ onBeforeUnmount(stopProcessingPoll)
           <a-table-column
             title="文件名称"
             key="filename"
+            align="center"
           >
             <template #default="{ record }">
               <a-space>
@@ -229,6 +230,7 @@ onBeforeUnmount(stopProcessingPoll)
             title="状态"
             key="status"
             width="120"
+            align="center"
           >
             <template #default="{ record }">
               <a-tag
@@ -258,6 +260,7 @@ onBeforeUnmount(stopProcessingPoll)
             title="文件大小"
             key="file_size"
             width="120"
+            align="center"
           >
             <template #default="{ record }">
               {{ formatFileSize(record.file_size) }}
@@ -268,6 +271,7 @@ onBeforeUnmount(stopProcessingPoll)
             title="Chunk 数量"
             key="chunk_count"
             width="120"
+            align="center"
           >
             <template #default="{ record }">
               {{ record.chunk_count }}
@@ -278,6 +282,7 @@ onBeforeUnmount(stopProcessingPoll)
             title="上传时间"
             key="created_at"
             width="180"
+            align="center"
           >
             <template #default="{ record }">
               {{ formatDateTime(record.created_at) }}
@@ -287,7 +292,9 @@ onBeforeUnmount(stopProcessingPoll)
           <a-table-column
             title="操作"
             key="action"
-            width="180"
+            :width="180"
+            align="center"
+
           >
             <template #default="{ record }">
               <a-space>
@@ -600,12 +607,25 @@ onBeforeUnmount(stopProcessingPoll)
 ========================= */
 
 .knowledge-page :deep(.ant-table .ant-btn-link) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+
   height: 28px;
   padding: 0 5px;
 
   border-radius: 6px;
 
   font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* 图标不参与压缩，保证“删除”与图标始终横向排列。 */
+.knowledge-page :deep(.ant-table .ant-btn-link .anticon) {
+  display: inline-flex;
+  flex: 0 0 auto;
 }
 
 .knowledge-page :deep(.ant-table .ant-btn-link:not(.ant-btn-dangerous)) {
