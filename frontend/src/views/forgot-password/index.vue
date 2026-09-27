@@ -103,8 +103,6 @@ import request from '@/api/request'
 
 const router = useRouter()
 
-const formRef = ref()
-
 const sendingCode = ref(false)
 const resetting = ref(false)
 const countdown = ref(0)

@@ -1268,6 +1268,21 @@ onBeforeUnmount(() => {
                     class="generating"
                   />
 
+                  <!-- 【微交互】让流式等待过程有持续反馈，而不是静态空白。 -->
+                  <div
+                    v-if="
+                      loading &&
+                      currentAssistantId === item.id
+                    "
+                    class="stream-status"
+                    aria-live="polite"
+                  >
+                    <span class="stream-dots">
+                      <i></i><i></i><i></i>
+                    </span>
+                    AI 正在生成回答
+                  </div>
+
                   <!-- AI 操作 -->
                   <a-space
                     v-if="
@@ -1882,6 +1897,82 @@ onBeforeUnmount(() => {
 
 .generating {
   margin-top: 8px;
+}
+
+/* =========================
+   Streaming Feedback
+========================= */
+
+.stream-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+
+  margin-top: 10px;
+
+  color: #86909c;
+  font-size: 12px;
+  line-height: 18px;
+
+  animation: status-fade-in 0.2s ease both;
+}
+
+.stream-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.stream-dots i {
+  display: block;
+  width: 4px;
+  height: 4px;
+
+  border-radius: 50%;
+  background: #5b8ff9;
+
+  animation: stream-dot 1s ease-in-out infinite;
+}
+
+.stream-dots i:nth-child(2) {
+  animation-delay: 0.14s;
+}
+
+.stream-dots i:nth-child(3) {
+  animation-delay: 0.28s;
+}
+
+@keyframes stream-dot {
+  0%,
+  60%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes status-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stream-status,
+  .stream-dots i {
+    animation: none;
+  }
 }
 
 /* =========================

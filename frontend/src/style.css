@@ -295,3 +295,82 @@ code {
     border-right-color: var(--border);
   }
 }
+
+/* =========================================================
+   Product micro-interactions
+   仅补充反馈感：不改页面的颜色方案、内容区或布局结构。
+========================================================= */
+
+:root {
+  color-scheme: light;
+  font: 14px/1.5 var(--sans);
+}
+
+html,
+body,
+#app {
+  width: 100%;
+  min-width: 320px;
+  min-height: 100%;
+}
+
+body {
+  min-height: 100vh;
+  background: #f7f8fa;
+}
+
+#app {
+  max-width: none;
+  margin: 0;
+  border: 0;
+  text-align: left;
+}
+
+.app-route-enter-active,
+.app-route-leave-active {
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+.app-route-enter-from {
+  opacity: 0;
+  transform: translateY(5px);
+}
+
+.app-route-leave-to {
+  opacity: 0;
+  transform: translateY(-3px);
+}
+
+/* 按钮具备悬停、按下和键盘聚焦的即时反馈。 */
+.ant-btn {
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    background-color 0.16s ease,
+    border-color 0.16s ease !important;
+}
+
+.ant-btn:not(:disabled):not(.ant-btn-loading):active {
+  transform: scale(0.97);
+}
+
+.ant-btn-primary:not(:disabled):not(.ant-btn-loading):hover {
+  box-shadow: 0 5px 12px rgb(22 119 255 / 18%);
+}
+
+.ant-btn:focus-visible,
+.ant-input:focus-visible,
+.ant-input-affix-wrapper:focus-visible {
+  outline: 2px solid rgb(22 119 255 / 30%);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-route-enter-active,
+  .app-route-leave-active,
+  .ant-btn {
+    transition: none !important;
+  }
+}
