@@ -869,5 +869,107 @@ onBeforeUnmount(stopProcessingPoll)
     width: 90px;
   }
 }
+/* =========================
+   Refined Knowledge Surface
+========================= */
+
+.knowledge-page {
+  background: transparent;
+}
+
+.knowledge-page > :deep(.ant-card) {
+  border-color: #e8e8ef !important;
+  border-radius: 18px !important;
+  background: rgb(255 255 255 / 86%);
+  box-shadow: 0 14px 34px rgb(30 30 58 / 5%);
+  backdrop-filter: blur(14px);
+}
+
+.knowledge-page > :deep(.ant-card-head) {
+  border-bottom-color: #eeeeF4;
+}
+
+.knowledge-page :deep(.ant-table-thead > tr > th) {
+  background: #fafaff;
+}
+
+.knowledge-page :deep(.ant-table-tbody > tr > td) {
+  transition: background-color 0.18s ease, transform 0.18s ease;
+}
+
+.knowledge-page :deep(.ant-table-tbody > tr:hover > td) {
+  background: #f8f8ff !important;
+}
+
+.knowledge-page :deep(.ant-table-tbody > tr:hover > td:first-child) {
+  box-shadow: inset 3px 0 0 #7778e8;
+}
+/* =========================
+   Conversational Workspace Surface
+========================= */
+
+.knowledge-page {
+  max-width: 1120px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 44px 24px;
+  background: transparent;
+}
+
+.knowledge-page > :deep(.ant-card) {
+  border: 1px solid #e9e9e9 !important;
+  border-radius: 14px !important;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.knowledge-page > :deep(.ant-card-head) {
+  min-height: 70px;
+  border-bottom-color: #eeeeee;
+}
+
+.knowledge-page .title {
+  color: #242424;
+  font-size: 18px;
+  letter-spacing: -0.02em;
+}
+
+.knowledge-page .description {
+  color: #838383;
+}
+
+.knowledge-page :deep(.ant-table-thead > tr > th) {
+  color: #797979;
+  background: #fafafa;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.knowledge-page :deep(.ant-table-tbody > tr > td) {
+  border-bottom-color: #f0f0f0;
+}
+
+.knowledge-page :deep(.ant-table-tbody > tr:hover > td) {
+  background: #fafafa !important;
+}
+
+.knowledge-page :deep(.ant-table-tbody > tr:hover > td:first-child) {
+  box-shadow: inset 2px 0 0 #202020;
+}
+
+.knowledge-page :deep(.ant-btn-primary) {
+  background: #202020;
+  box-shadow: none;
+}
+
+.knowledge-page :deep(.ant-btn-primary:hover) {
+  background: #3a3a3a;
+}
+
+@media (max-width: 768px) {
+  .knowledge-page {
+    padding: 20px 12px;
+  }
+}
 </style>
 ```

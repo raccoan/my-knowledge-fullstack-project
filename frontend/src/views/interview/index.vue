@@ -1974,6 +1974,153 @@ onMounted(async () => {
     width: 100%;
   }
 }
+/* =========================
+   Refined Interview Surface
+========================= */
+
+.interview-page {
+  background: transparent;
+}
+
+.interview-header,
+.sidebar-card,
+.conversation-card,
+.answer-card,
+.report-card {
+  border-color: #e8e8ef !important;
+  box-shadow: 0 12px 32px rgb(30 30 58 / 5%);
+}
+
+.interview-header {
+  margin: 12px 12px 0;
+  border: 1px solid #e8e8ef;
+  border-radius: 18px;
+  background: rgb(255 255 255 / 82%);
+  backdrop-filter: blur(14px);
+}
+
+.interview-main {
+  padding-top: 20px;
+}
+
+.conversation-card,
+.answer-card,
+.report-card,
+.sidebar-card {
+  border-radius: 16px !important;
+  background: rgb(255 255 255 / 86%);
+}
+
+.message-item {
+  transition: transform 0.18s ease;
+}
+
+.message-item:hover {
+  transform: translateY(-1px);
+}
+
+.current-question {
+  border: 1px solid #e0e0fa;
+  background: linear-gradient(135deg, #f4f4ff, #fafaff);
+}
+
+.score-card {
+  border-color: #e9e9f1;
+  background: #fafaff;
+}
+/* =========================
+   Conversational Workspace Surface
+========================= */
+
+.interview-page {
+  min-height: 100vh;
+  background: #ffffff;
+}
+
+.page-header {
+  min-height: 64px;
+  margin: 0;
+  padding: 0 28px;
+  border: 0;
+  border-bottom: 1px solid #eeeeee;
+  border-radius: 0;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.title {
+  color: #202020;
+  letter-spacing: -0.025em;
+}
+
+.subtitle {
+  color: #858585;
+}
+
+.page-content {
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 30px 24px;
+}
+
+.conversation-card,
+.answer-card,
+.report-card,
+.score-card {
+  border: 1px solid #e9e9e9 !important;
+  border-radius: 12px !important;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.conversation-card :deep(.ant-card-head),
+.answer-card :deep(.ant-card-head),
+.report-card :deep(.ant-card-head) {
+  border-bottom-color: #eeeeee;
+}
+
+.interviewer-avatar {
+  color: #ffffff;
+  background: #202020;
+  box-shadow: none;
+}
+
+.candidate-avatar {
+  color: #ffffff;
+  background: #777777;
+  box-shadow: none;
+}
+
+.question-content,
+.answer-content {
+  border-color: #eeeeee;
+  box-shadow: none;
+}
+
+.answer-content {
+  background: #f2f2f2;
+}
+
+.current-question {
+  border-color: #e3e3e3;
+  background: #fafafa;
+}
+
+.answer-footer :deep(.ant-btn-primary) {
+  border-color: #202020;
+  background: #202020;
+  box-shadow: none;
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    padding: 12px 16px;
+  }
+
+  .page-content {
+    padding: 18px 12px;
+  }
+}
 </style>
 ```
 

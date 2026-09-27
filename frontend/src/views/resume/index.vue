@@ -1954,5 +1954,159 @@ onMounted(async () => {
     padding-left: 0;
   }
 }
+/* =========================
+   Refined Resume Surface
+========================= */
+
+.resume-page {
+  background: transparent;
+}
+
+.page-header,
+.resume-sidebar,
+.resume-title-row,
+.resume-sections > :deep(.ant-card),
+.interview-history {
+  border-color: #e8e8ef !important;
+  box-shadow: 0 12px 30px rgb(30 30 58 / 4%);
+}
+
+.page-header {
+  margin: 12px 12px 0;
+  border: 1px solid #e8e8ef;
+  border-radius: 18px;
+  background: rgb(255 255 255 / 82%);
+  backdrop-filter: blur(14px);
+}
+
+.resume-content {
+  padding-top: 20px;
+}
+
+.resume-sidebar {
+  border-radius: 16px;
+  background: rgb(255 255 255 / 82%);
+}
+
+.resume-item {
+  border: 1px solid transparent !important;
+  transition: transform 0.18s ease, background-color 0.18s ease, border-color 0.18s ease !important;
+}
+
+.resume-item:hover {
+  border-color: #e1e1fa !important;
+  background: #f8f8ff !important;
+  transform: translateX(2px);
+}
+
+.resume-item.active {
+  border-color: #ddddff !important;
+  background: #f0f0ff !important;
+}
+
+.resume-sections > :deep(.ant-card) {
+  background: rgb(255 255 255 / 86%);
+}
+
+.project-card:hover {
+  border-color: #dedeF8 !important;
+  box-shadow: 0 10px 24px rgb(91 92 226 / 7%);
+  transform: translateY(-1px);
+}
+/* =========================
+   Conversational Workspace Surface
+========================= */
+
+.resume-page {
+  min-height: 100vh;
+  background: #ffffff;
+}
+
+.page-header {
+  min-height: 70px;
+  margin: 0;
+  padding: 0 30px;
+  border: 0;
+  border-bottom: 1px solid #eeeeee;
+  border-radius: 0;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.page-title,
+.resume-title {
+  color: #202020;
+  letter-spacing: -0.025em;
+}
+
+.page-subtitle {
+  color: #888888;
+}
+
+.header-actions :deep(.ant-btn-primary) {
+  border-color: #202020;
+  background: #202020;
+  box-shadow: none;
+}
+
+.header-actions :deep(.ant-btn-primary:not(:first-child)) {
+  border-color: #ececec;
+  color: #2c2c2c;
+  background: #ffffff;
+}
+
+.resume-content {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 30px 24px;
+}
+
+.resume-sidebar {
+  border: 1px solid #ececec;
+  border-radius: 12px;
+  background: #fafafa;
+  box-shadow: none;
+}
+
+.resume-item {
+  border: 0 !important;
+  border-radius: 7px;
+}
+
+.resume-item:hover,
+.resume-item.active {
+  background: #ececec !important;
+  transform: none;
+}
+
+.resume-title-row,
+.resume-sections > :deep(.ant-card),
+.interview-history-card {
+  border: 1px solid #e9e9e9 !important;
+  border-radius: 12px !important;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.project-card {
+  border-color: #ededed !important;
+  background: #fcfcfc;
+}
+
+.project-card:hover {
+  border-color: #d8d8d8 !important;
+  box-shadow: none;
+  transform: none;
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    padding: 14px 16px;
+  }
+
+  .resume-content {
+    padding: 18px 12px;
+  }
+}
 </style>
 ```

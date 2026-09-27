@@ -127,6 +127,14 @@ const currentConversationId = ref<number | null>(null)
 
 const inputValue = ref('')
 
+/** 【新增交互】空会话时提供可直接发起的任务入口。 */
+const starterPrompts = [
+  '总结我的知识库中最重要的内容',
+  '根据我的资料生成一份学习计划',
+  '帮我找出与 Vue 3 相关的知识点',
+  '帮我整理一个技术面试复习方向',
+]
+
 const loading = ref(false)
 
 const currentAssistantId =
@@ -902,6 +910,10 @@ onMounted(()=>{
   loadConversations()
 })
 
+const sendStarterPrompt = (prompt: string) => {
+  void sendMessage(prompt)
+}
+
 /**
  * 【交互优化】离开聊天页时终止未完成的流式请求并释放动画帧，
  * 防止页面切换后仍更新旧页面状态。
@@ -1173,18 +1185,28 @@ onBeforeUnmount(() => {
           <div
             class="message-container"
           >
-            <!-- 空状态 -->
-            <a-empty
+            <!-- 空状态：从静态空页面改为可直接开始的任务入口。 -->
+            <div
               v-if="!messages.length"
-              description="开始向你的知识库提问吧"
               class="empty-chat"
             >
-              <template #image>
-                <RobotOutlined
-                  class="empty-icon"
-                />
-              </template>
-            </a-empty>
+              <div class="empty-mark">✦</div>
+              <h1>今天想学习什么？</h1>
+              <p>从你的知识库、简历和项目资料中开始一段对话。</p>
+
+              <div class="starter-grid">
+                <button
+                  v-for="prompt in starterPrompts"
+                  :key="prompt"
+                  type="button"
+                  class="starter-card"
+                  @click="sendStarterPrompt(prompt)"
+                >
+                  <span>{{ prompt }}</span>
+                  <ArrowUpOutlined />
+                </button>
+              </div>
+            </div>
 
             <!-- 消息 -->
             <div
@@ -2290,5 +2312,520 @@ onBeforeUnmount(() => {
 .arrow {
   color: #86909c;
   font-size: 10px;
+}
+/* =========================
+   Refined Chat Surface
+========================= */
+
+.chat-page {
+  background: transparent;
+}
+
+.chat-sider {
+  margin: 12px 0 12px 12px;
+  overflow: hidden;
+  border: 1px solid rgb(232 232 239 / 88%);
+  border-radius: 18px;
+  background: rgb(255 255 255 / 74%);
+  box-shadow: 0 10px 30px rgb(30 30 58 / 4%);
+  backdrop-filter: blur(16px);
+}
+
+.chat-header {
+  margin: 12px 12px 0;
+  border: 1px solid rgb(232 232 239 / 88%);
+  border-radius: 18px;
+  background: rgb(255 255 255 / 74%);
+  box-shadow: 0 8px 24px rgb(30 30 58 / 3%);
+  backdrop-filter: blur(16px);
+}
+
+.chat-content {
+  margin: 0 12px 12px;
+  border-radius: 18px;
+  background: transparent;
+}
+
+.brand {
+  letter-spacing: -0.3px;
+}
+
+.conversation-item {
+  border: 1px solid transparent !important;
+}
+
+.conversation-item:hover {
+  border-color: #e6e6fb !important;
+  background: #f8f8ff;
+  transform: translateX(2px);
+}
+
+.conversation-item-active,
+.conversation-item-active:hover {
+  border-color: #dfdfff !important;
+  background: linear-gradient(135deg, #f0f0ff, #f7f7ff);
+}
+
+.feature-card {
+  border-color: #ededf3;
+  background: rgb(255 255 255 / 74%);
+}
+
+.feature-card:hover {
+  border-color: #dcdcff;
+  background: #fafaff;
+  box-shadow: 0 10px 20px rgb(91 92 226 / 8%);
+  transform: translateY(-2px);
+}
+
+.assistant-message {
+  border: 1px solid #e9e9f0;
+  box-shadow: 0 10px 28px rgb(30 30 58 / 4%);
+}
+
+.candidate-message .answer-content,
+.user-message {
+  background: linear-gradient(135deg, #5b5ce2, #7474eb);
+}
+
+.assistant-message:hover {
+  border-color: #ddddef;
+}
+
+.input-wrapper {
+  border-color: #e6e6ef;
+  box-shadow: 0 8px 24px rgb(30 30 58 / 5%);
+}
+
+.input-wrapper:focus-within {
+  border-color: #b8b8f2;
+  box-shadow: 0 0 0 4px rgb(91 92 226 / 8%), 0 10px 26px rgb(30 30 58 / 6%);
+}
+
+@media (max-width: 768px) {
+  .chat-sider {
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .chat-header,
+  .chat-content {
+    margin-right: 0;
+    margin-left: 0;
+    border-radius: 0;
+    border-right: 0;
+    border-left: 0;
+  }
+}
+/* =========================================================
+   Conversational workspace style
+   借鉴现代对话应用的“低装饰、强聚焦”体验，不使用品牌资产。
+========================================================= */
+
+.chat-page {
+  min-height: 100vh;
+  background: #ffffff;
+}
+
+.chat-sider {
+  margin: 0;
+  border: 0;
+  border-right: 1px solid #ececec;
+  border-radius: 0;
+  background: #f9f9f9 !important;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.sider-content {
+  padding: 12px 10px;
+}
+
+.brand {
+  gap: 9px;
+  height: 38px;
+  padding: 0 10px;
+  color: #171717;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.brand :deep(.anticon) {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 7px;
+  color: #ffffff;
+  background: #171717;
+  font-size: 14px;
+}
+
+.new-chat-button {
+  height: 38px !important;
+  margin: 10px 0 14px;
+  border-color: #e3e3e3 !important;
+  border-radius: 9px !important;
+  color: #242424 !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.new-chat-button::before {
+  content: '+';
+  margin-right: 7px;
+  font-size: 17px;
+  font-weight: 300;
+  vertical-align: -1px;
+}
+
+.new-chat-button:hover {
+  border-color: #d6d6d6 !important;
+  background: #f3f3f3 !important;
+}
+
+.chat-sider :deep(.ant-divider) {
+  margin: 8px 4px 14px;
+  border-color: #e8e8e8;
+}
+
+.sider-title {
+  padding: 0 10px 8px;
+  color: #777777;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.conversation-item,
+.conversation-item-active,
+.conversation-item-active:hover {
+  border: 0 !important;
+  border-radius: 7px;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+.conversation-item:hover,
+.conversation-item-active,
+.conversation-item-active:hover {
+  background: #ececec;
+}
+
+.conversation-title {
+  font-size: 13px;
+}
+
+.feature-card {
+  margin-bottom: 3px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.feature-card:hover {
+  border: 0;
+  background: #ececec;
+  box-shadow: none;
+  transform: none;
+}
+
+.feature-card :deep(.ant-card-body) {
+  padding: 9px 10px;
+}
+
+.feature-card .ant-space {
+  color: #393939;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.feature-card :deep(.anticon) {
+  color: #575757;
+  font-size: 15px;
+}
+
+.feature-description,
+.sider-tip {
+  color: #8a8a8a;
+  font-size: 11px;
+}
+
+.chat-header {
+  height: 56px;
+  margin: 0;
+  padding: 0 24px;
+  border: 0;
+  border-bottom: 1px solid #f0f0f0;
+  border-radius: 0;
+  background: #ffffff;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.header-title {
+  color: #202020;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.header-subtitle {
+  display: none;
+}
+
+.user-menu {
+  padding: 6px 8px;
+  border-radius: 7px;
+}
+
+.user-menu:hover {
+  background: #f4f4f4;
+}
+
+.chat-content {
+  margin: 0;
+  border-radius: 0;
+  background: #ffffff;
+}
+
+.message-container {
+  width: min(820px, calc(100% - 40px));
+  padding: 38px 0 24px;
+}
+
+.empty-chat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: min(54vh, 460px);
+  margin: 0;
+  padding: 30px 0;
+}
+
+.empty-mark {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  margin-bottom: 18px;
+  place-items: center;
+  border-radius: 10px;
+  color: #ffffff;
+  background: #202020;
+  font-size: 18px;
+}
+
+.empty-chat h1 {
+  margin: 0;
+  color: #202020;
+  font-size: clamp(26px, 3vw, 34px);
+  font-weight: 600;
+  letter-spacing: -0.04em;
+}
+
+.empty-chat p {
+  margin: 10px 0 26px;
+  color: #777777;
+  font-size: 14px;
+}
+
+.starter-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: min(640px, 100%);
+  gap: 10px;
+}
+
+.starter-card {
+  display: flex;
+  min-height: 72px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 15px;
+  border: 1px solid #e6e6e6;
+  border-radius: 12px;
+  color: #373737;
+  background: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: left;
+  transition: border-color 0.16s ease, background-color 0.16s ease, transform 0.16s ease;
+}
+
+.starter-card :deep(.anticon) {
+  flex: 0 0 auto;
+  color: #949494;
+}
+
+.starter-card:hover {
+  border-color: #cfcfcf;
+  background: #f8f8f8;
+  transform: translateY(-1px);
+}
+
+.starter-card:active {
+  transform: translateY(0) scale(0.99);
+}
+
+.message-row {
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+}
+
+.assistant-avatar {
+  color: #ffffff;
+  background: #202020;
+  box-shadow: none;
+}
+
+.user-avatar {
+  color: #ffffff;
+  background: #777777;
+  box-shadow: none;
+}
+
+.message-main {
+  max-width: calc(100% - 40px);
+}
+
+.assistant-message,
+.assistant-message:hover {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.assistant-message :deep(.ant-card-body) {
+  padding: 2px 0;
+}
+
+.assistant-content {
+  color: #252525;
+  font-size: 15px;
+  line-height: 1.85;
+}
+
+.user-message,
+.candidate-message .answer-content {
+  border: 0;
+  border-radius: 18px;
+  background: #f2f2f2;
+  box-shadow: none;
+}
+
+.user-message :deep(.ant-card-body) {
+  padding: 10px 14px;
+}
+
+.user-content {
+  color: #2c2c2c;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.message-actions {
+  opacity: 0;
+  transition: opacity 0.16s ease;
+}
+
+.message-row:hover .message-actions {
+  opacity: 1;
+}
+
+.chat-footer {
+  padding: 12px 24px 18px;
+  background: #ffffff;
+}
+
+.input-wrapper {
+  width: min(780px, 100%);
+  padding: 10px 12px 8px;
+  border: 1px solid #dedede;
+  border-radius: 22px;
+  background: #ffffff;
+  box-shadow: 0 4px 18px rgb(0 0 0 / 7%);
+}
+
+.input-wrapper:focus-within {
+  border-color: #c9c9c9;
+  box-shadow: 0 5px 20px rgb(0 0 0 / 10%);
+}
+
+.input-bottom {
+  padding-top: 7px;
+  border-top: 0;
+}
+
+.input-tip {
+  color: #969696;
+}
+
+.input-bottom :deep(.ant-btn-primary) {
+  display: grid;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  padding: 0;
+  place-items: center;
+  border-radius: 50%;
+  background: #202020;
+  box-shadow: none;
+}
+
+.input-bottom :deep(.ant-btn-primary:hover) {
+  background: #373737;
+  box-shadow: none;
+}
+
+.input-bottom :deep(.ant-btn-primary:not(:disabled) .anticon) {
+  margin: 0;
+}
+
+.input-bottom :deep(.ant-btn-primary) {
+  font-size: 0;
+}
+
+.input-bottom :deep(.ant-btn-primary .anticon) {
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .chat-header {
+    padding: 0 16px;
+  }
+
+  .message-container {
+    width: min(100% - 24px, 820px);
+    padding-top: 24px;
+  }
+
+  .empty-chat {
+    min-height: 48vh;
+  }
+
+  .starter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chat-footer {
+    padding: 10px 12px 14px;
+  }
+
+  .input-wrapper {
+    border-radius: 18px;
+  }
 }
 </style>

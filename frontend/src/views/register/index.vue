@@ -464,4 +464,33 @@ async function handleRegister() {
     width: 110px;
   }
 }
+/* 简洁认证页：与登录页统一。 */
+.register-page {
+  background: #ffffff;
+}
+
+.register-card {
+  width: min(420px, 100%);
+  border: 1px solid #e7e7e7;
+  border-radius: 14px;
+  box-shadow: 0 12px 36px rgb(0 0 0 / 7%);
+}
+
+.title {
+  color: #202020;
+  font-size: 22px;
+  letter-spacing: -0.025em;
+}
+
+.register-type .ant-btn-primary,
+.register-card :deep(.ant-btn-primary) {
+  border-color: #202020;
+  background: #202020;
+  box-shadow: none;
+}
+
+.register-type .ant-btn-primary:hover,
+.register-card :deep(.ant-btn-primary:hover) {
+  background: #383838;
+}
 </style>

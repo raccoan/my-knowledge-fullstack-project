@@ -374,3 +374,50 @@ body {
     transition: none !important;
   }
 }
+
+/* =========================================================
+   Refined visual system
+   暖白底色 + 墨色文字 + 克制的蓝紫强调色，减少传统后台的生硬感。
+========================================================= */
+
+:root {
+  --ink: #20212b;
+  --muted: #747686;
+  --canvas: #f7f7fb;
+  --panel: rgb(255 255 255 / 88%);
+  --line: #e8e8ef;
+  --brand: #5b5ce2;
+  --brand-soft: #efefff;
+  --shadow-soft: 0 12px 32px rgb(25 25 45 / 5%);
+  --shadow-hover: 0 16px 36px rgb(25 25 45 / 9%);
+}
+
+html,
+body {
+  background:
+    radial-gradient(circle at 8% 4%, rgb(115 111 255 / 8%), transparent 24rem),
+    radial-gradient(circle at 93% 0%, rgb(55 139 255 / 6%), transparent 22rem),
+    var(--canvas);
+}
+
+.ant-card {
+  border-color: var(--line);
+}
+
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-input-textarea textarea {
+  border-color: #e4e4ed;
+  box-shadow: none;
+}
+
+.ant-input:hover,
+.ant-input-affix-wrapper:hover {
+  border-color: #b9b9ef;
+}
+
+.ant-input:focus,
+.ant-input-affix-wrapper-focused {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgb(91 92 226 / 10%);
+}

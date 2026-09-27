@@ -375,5 +375,43 @@ async function handleLogin() {
   color: #1677ff;
   cursor: pointer;
 }
+/* 简洁认证页：降低装饰，聚焦表单。 */
+.login-page {
+  background: #ffffff;
+}
+
+.login-card {
+  width: min(390px, 100%);
+  padding: 36px;
+  border: 1px solid #e7e7e7;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 12px 36px rgb(0 0 0 / 7%);
+  backdrop-filter: none;
+}
+
+.logo {
+  width: 34px;
+  height: 34px;
+  margin-bottom: 16px;
+  border-radius: 9px;
+  background: #202020;
+  box-shadow: none;
+  font-size: 12px;
+}
+
+.login-card h1 {
+  font-size: 22px;
+}
+
+.login-card :deep(.ant-btn-primary) {
+  background: #202020;
+  box-shadow: none;
+}
+
+.login-card :deep(.ant-btn-primary:hover) {
+  background: #383838;
+  box-shadow: none;
+}
 </style>
 ```
