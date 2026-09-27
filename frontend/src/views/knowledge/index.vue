@@ -1,91 +1,85 @@
 <script setup lang="ts">
-import {
-  onMounted,
-  ref,
-} from 'vue'
 
+import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { message, Modal } from 'ant-design-vue'
+import type { UploadProps } from 'ant-design-vue'
 import {
-  message,
-  Modal,
-} from 'ant-design-vue'
-
-import type {
-  UploadProps,
-} from 'ant-design-vue'
-
-import {
-  UploadOutlined,
   DeleteOutlined,
+  EyeOutlined,
   FilePdfOutlined,
   ReloadOutlined,
-  EyeOutlined,
+  UploadOutlined,
 } from '@ant-design/icons-vue'
-
 import {
-  getFiles,
-  getFileDetail,
-  uploadFile,
   deleteFile,
-} from '@/api/files'
-
-import type {
-  FileItem,
-  FileDetail,
+  getFileDetail,
+  getFiles,
+  getProcessingStatus,
+  retryFile,
+  uploadFileAsync,
+  type FileDetail,
+  type FileItem,
 } from '@/api/files'
 
 const files = ref<FileItem[]>([])
 const loading = ref(false)
 const uploadLoading = ref(false)
 const deletingId = ref<number | null>(null)
-
+const retryingId = ref<number | null>(null) // 【新增】失败文档的重试加载态。
 const detailVisible = ref(false)
 const detailLoading = ref(false)
 const currentDetail = ref<FileDetail | null>(null)
 
+// 【新增】统一保存轮询定时器，离开知识库页面时必须释放。
+let processingTimer: ReturnType<typeof window.setInterval> | null = null
+
 const formatFileSize = (size: number | null) => {
-  if (size === null || size === undefined) {
-    return '-'
-  }
-
-  if (size < 1024) {
-    return `${size} B`
-  }
-
-  if (size < 1024 * 1024) {
-    return `${(size / 1024).toFixed(1)} KB`
-  }
-
+  if (size === null || size === undefined) return '-'
+  if (size < 1024) return `${size} B`
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
   return `${(size / 1024 / 1024).toFixed(1)} MB`
 }
 
-const formatDateTime = (value: string) => {
-  if (!value) {
-    return '-'
-  }
-
-  return new Date(value).toLocaleString('zh-CN')
-}
+const formatDateTime = (value: string) => (value ? new Date(value).toLocaleString('zh-CN') : '-')
 
 const loadFiles = async () => {
   loading.value = true
-
   try {
     files.value = await getFiles()
-  } catch (error) {
+  } catch {
     message.error('获取知识库失败')
   } finally {
     loading.value = false
   }
 }
 
+const stopProcessingPoll = () => {
+  if (processingTimer) window.clearInterval(processingTimer)
+  processingTimer = null
+}
+
+// 【新增】仅轮询 processing 文档；全部结束后自动停止，避免无意义请求。
+const startProcessingPoll = () => {
+  stopProcessingPoll()
+  processingTimer = window.setInterval(async () => {
+    const processingItems = files.value.filter((item) => item.status === 'processing')
+    if (!processingItems.length) return stopProcessingPoll()
+    try {
+      await Promise.all(processingItems.map((item) => getProcessingStatus(item.id)))
+      await loadFiles()
+    } catch {
+      // 下一轮继续尝试；不因一次网络波动停止轮询。
+    }
+  }, 2000)
+}
+
 const handleViewDetail = async (file: FileItem) => {
   detailVisible.value = true
   detailLoading.value = true
   currentDetail.value = null
-
   try {
     currentDetail.value = await getFileDetail(file.id)
-  } catch (error) {
+  } catch {
     message.error('获取文档详情失败')
     detailVisible.value = false
   } finally {
@@ -93,54 +87,56 @@ const handleViewDetail = async (file: FileItem) => {
   }
 }
 
-const beforeUpload: UploadProps['beforeUpload'] = async (
-  file,
-) => {
+const beforeUpload: UploadProps['beforeUpload'] = async (file) => {
   if (file.type !== 'application/pdf') {
     message.error('目前只支持 PDF 文件')
     return false
   }
-
   uploadLoading.value = true
-
   try {
-    await uploadFile(file)
-
-    message.success('上传成功')
-
+    // 【新增】改调异步接口：无需等待 PDF 解析和向量化完成。
+    await uploadFileAsync(file)
+    message.success('文件已上传，正在后台解析')
     await loadFiles()
-  } catch (error) {
+    startProcessingPoll()
+  } catch {
     message.error('上传失败')
   } finally {
     uploadLoading.value = false
   }
-
   return false
+}
+
+const handleRetry = async (file: FileItem) => {
+  retryingId.value = file.id
+  try {
+    await retryFile(file.id)
+    message.success('已重新加入处理队列')
+    await loadFiles()
+    startProcessingPoll()
+  } catch {
+    message.error('重试失败')
+  } finally {
+    retryingId.value = null
+  }
 }
 
 const handleDelete = (file: FileItem) => {
   Modal.confirm({
     title: '确认删除？',
     content: `确定要删除「${file.filename}」吗？删除后无法恢复。`,
-    okText: '删除',
-    cancelText: '取消',
-    okType: 'danger',
-
+    okText: '删除', cancelText: '取消', okType: 'danger',
     async onOk() {
       deletingId.value = file.id
-
       try {
         await deleteFile(file.id)
-
         message.success('删除成功')
-
         await loadFiles()
-
         if (currentDetail.value?.id === file.id) {
           detailVisible.value = false
           currentDetail.value = null
         }
-      } catch (error) {
+      } catch {
         message.error('删除失败')
       } finally {
         deletingId.value = null
@@ -149,9 +145,14 @@ const handleDelete = (file: FileItem) => {
   })
 }
 
-onMounted(() => {
-  loadFiles()
+onMounted(async () => {
+  await loadFiles()
+  if (files.value.some((item) => item.status === 'processing')) startProcessingPoll()
 })
+
+// 【新增】避免离开页面后仍持续发送轮询请求。
+onBeforeUnmount(stopProcessingPoll)
+
 </script>
 
 <template>
@@ -299,6 +300,16 @@ onMounted(() => {
                   </template>
 
                   查看
+                </a-button>
+
+                <!-- 【新增】只有后台处理失败时才允许用户重试。 -->
+                <a-button
+                  v-if="record.status === 'failed'"
+                  type="link"
+                  :loading="retryingId === record.id"
+                  @click="handleRetry(record)"
+                >
+                  重试
                 </a-button>
 
                 <a-popconfirm

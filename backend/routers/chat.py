@@ -3,6 +3,7 @@ from fastapi.params import Depends
 from sqlalchemy.orm import  Session
 
 from database import get_db
+
 from models.conversation import Conversation
 from models.message import Message
 from schemas.chat import ChatRequest

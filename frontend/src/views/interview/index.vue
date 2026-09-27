@@ -273,6 +273,11 @@ const startInterview = async () => {
 
     interviewId.value = data.id
 
+     // 【新增】后端返回空题时，不进入一个无法作答的页面。
+    if (!data.question?.trim()) {
+      throw new Error('后端未返回有效的首题')
+    }
+
     /**
      * 创建成功以后，
      * URL 变成：

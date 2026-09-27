@@ -8,6 +8,7 @@ from routers import conversations
 from routers import  resumes
 from routers import  interviews
 from routers import  verification
+from routers import async_files
 
 from models.user import User
 from models.file import File
@@ -45,10 +46,12 @@ def root():
 app.include_router(users.router)
 app.include_router(verification.router)
 app.include_router(files.router)
+app.include_router(async_files.router)
 app.include_router(chat.router)
 app.include_router(conversations.router)
 app.include_router(resumes.router)
 app.include_router(interviews.router)
+
 
 load_dotenv()
 

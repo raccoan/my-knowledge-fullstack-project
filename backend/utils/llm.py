@@ -2,12 +2,21 @@ import os
 from dotenv import  load_dotenv
 from openai import  OpenAI
 import json
-
+from utils.structured_json import ResumeParseResult, request_validated_json
 load_dotenv()
 client = OpenAI(
     api_key=os.getenv("API_KEY"),
-    base_url="https://open.bigmodel.cn/api/paas/v4"
+    base_url=os.getenv("BASE_URL")
 )
+
+def _ask_llm(prompt: str) -> str:
+    """【新增】供结构化输出工具调用，只返回模型文本。"""
+    response = client.chat.completions.create(
+        model="glm-4.5",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0,
+    )
+    return response.choices[0].message.content or ""
 
 def generate_conversation_title(
     question,
@@ -167,29 +176,35 @@ JSON 格式：
 {resume_text}
 ----------------
 """
-
-    response = client.chat.completions.create(
-        model="glm-4.5",
-        messages=[
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        temperature=0
+    #
+    # response = client.chat.completions.create(
+    #     model="glm-4.5",
+    #     messages=[
+    #         {
+    #             "role": "user",
+    #             "content": prompt
+    #         }
+    #     ],
+    #     temperature=0
+    # )
+    #
+    # content = response.choices[0].message.content
+    #
+    # # 防止模型偶尔返回 ```json
+    # content = content.strip()
+    #
+    # if content.startswith("```"):
+    #     content = content.replace("```json", "")
+    #     content = content.replace("```", "")
+    #     content = content.strip()
+    #
+    # return json.loads(content)
+    return request_validated_json(
+        request_fn=_ask_llm,
+        prompt=prompt,
+        schema=ResumeParseResult,
+        max_attempts=2,
     )
-
-    content = response.choices[0].message.content
-
-    # 防止模型偶尔返回 ```json
-    content = content.strip()
-
-    if content.startswith("```"):
-        content = content.replace("```json", "")
-        content = content.replace("```", "")
-        content = content.strip()
-
-    return json.loads(content)
 
 
 def generate_interview_question(
@@ -392,7 +407,13 @@ def generate_interview_question(
         temperature=0.8
     )
 
-    return response.choices[0].message.content.strip()
+    # 【新增】部分模型网关在异常或限流时可能返回空 content；不能把它当题目保存。
+    content = response.choices[0].message.content or ""
+    question = content.strip()
+    if not question:
+        raise RuntimeError("LLM 未返回有效面试问题")
+
+    return question
 
 
 def evaluate_interview_answer(

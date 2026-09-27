@@ -13,13 +13,16 @@ def retrieve_documents(
         question: str,
         user_id: int,
         db: Session,
-        n_results:int = 3,
+        n_results: int = 3,
 ):
-    """
-    根据问题，从当前用户自己的知识库中检索相关知识。
-    """
+    """根据问题，从当前用户自己的知识库中检索相关知识。"""
 
-    query_embedding = get_embedding(question)
+    # 【新增】RAG 是公共工具函数，任何调用方都不能把空文本送到 Embedding 服务。
+    normalized_question = question.strip() if isinstance(question, str) else ""
+    if not normalized_question:
+        return []
+
+    query_embedding = get_embedding(normalized_question)
 
     result = search_vector(
         query_embedding,
@@ -27,47 +30,24 @@ def retrieve_documents(
         n_results=n_results
     )
 
-    documents = result.get(
-        "documents",
-        [[]]
-    )[0]
-
-    metadatas = result.get(
-        "metadatas",
-        [[]]
-    )[0]
-
-    distances = result.get(
-        "distances",
-        [[]]
-    )[0]
+    documents = result.get("documents", [[]])[0]
+    metadatas = result.get("metadatas", [[]])[0]
+    distances = result.get("distances", [[]])[0]
 
     sources = []
-
     for index, content in enumerate(documents):
-
         metadata = metadatas[index]
+        document_id = metadata["document_id"]
 
-        document_id = metadata[
-            "document_id"
-        ]
-
-        document = db.query(
-            Document
-        ).filter(
+        document = db.query(Document).filter(
             Document.id == document_id
         ).first()
 
         filename = "未知文件"
-
         if document:
-
-            file = db.query(
-                FileModel
-            ).filter(
+            file = db.query(FileModel).filter(
                 FileModel.id == document.file_id
             ).first()
-
             if file:
                 filename = file.filename
 
@@ -79,6 +59,7 @@ def retrieve_documents(
         })
 
     return sources
+
 
 
 def build_prompt(

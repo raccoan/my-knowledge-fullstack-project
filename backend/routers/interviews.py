@@ -105,12 +105,28 @@ def create_interview(
     # 第一题使用“项目深挖”
     # ============================================================
 
-    question = generate_interview_question(
-        resume_data=resume.structured_data,
-        weak_points=weak_points,
-        question_type="项目深挖",
-        previous_questions=[]
-    )
+    try:
+        question = generate_interview_question(
+            resume_data=resume.structured_data,
+            weak_points=weak_points,
+            question_type="项目深挖",
+            previous_questions=[]
+        )
+    except Exception as error:
+        # 【新增】模型或网关调用失败时，不创建半成品面试。
+        raise HTTPException(
+            status_code=502,
+            detail="AI 首题生成失败，请稍后重试"
+        ) from error
+
+        # 【新增】绝不把空题目写入数据库，否则后续 RAG 检索会收到空 prompt。
+    if not isinstance(question, str) or not question.strip():
+        raise HTTPException(
+            status_code=502,
+            detail="AI 未生成有效的首题，请稍后重试"
+        )
+
+    question = question.strip()
 
     interview = Interview(
         user_id=user_id,
@@ -180,6 +196,14 @@ def answer_interview(
             detail="该面试已经结束"
         )
 
+        # 【新增】旧数据、异常创建记录都可能没有当前题目，不能继续提交。
+    current_question = (interview.current_question or "").strip()
+    if not current_question:
+        raise HTTPException(
+            status_code=409,
+            detail="当前面试没有有效题目，请删除该记录后重新开始面试"
+        )
+
 
     if not request.answer.strip():
         raise HTTPException(
@@ -241,29 +265,36 @@ def answer_interview(
     )
 
 
+    try:
+        # ==========================
+        # RAG检索知识库
+        # ==========================
 
-    # ==========================
-    # RAG检索知识库
-    # ==========================
+        knowledge_sources = retrieve_documents(
+            interview.current_question,
+            user_id,
+            db
+        )
 
-    knowledge_sources = retrieve_documents(
-        interview.current_question,
-        user_id,
-        db
-    )
+        # ==========================
+        # AI评价 + 生成下一题
+        # ==========================
 
-
-
-    # ==========================
-    # AI评价 + 生成下一题
-    # ==========================
-
-    result = evaluate_interview_answer_with_knowledge(
-        resume_data=resume.structured_data,
-        knowledge_sources=knowledge_sources,
-        question=interview.current_question,
-        answer=request.answer
-    )
+        result = evaluate_interview_answer_with_knowledge(
+            resume_data=resume.structured_data,
+            knowledge_sources=knowledge_sources,
+            question=interview.current_question,
+            answer=request.answer
+        )
+    except HTTPException:
+        raise
+    except Exception as error:
+        # 【新增】外部 Embedding / LLM 故障不再裸露为 500。
+        db.rollback()
+        raise HTTPException(
+            status_code=502,
+            detail="AI 服务暂时不可用，请稍后重试"
+        ) from error
 
 
     score = int(
