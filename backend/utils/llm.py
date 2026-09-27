@@ -2,21 +2,75 @@ import os
 from dotenv import  load_dotenv
 from openai import  OpenAI
 import json
-from utils.structured_json import ResumeParseResult, request_validated_json
+from typing import  Any
+from utils.structured_json import ResumeParseResult, request_validated_json, InterviewEvaluationResult
 load_dotenv()
 client = OpenAI(
     api_key=os.getenv("API_KEY"),
     base_url=os.getenv("BASE_URL")
 )
 
-def _ask_llm(prompt: str) -> str:
-    """【新增】供结构化输出工具调用，只返回模型文本。"""
+
+def _ask_llm(
+    prompt: str,
+    *,
+    temperature: float = 0,
+    max_tokens: int = 800,
+) -> str:
+    """统一 LLM 请求入口，并限制生成长度，避免无意义的长输出。"""
     response = client.chat.completions.create(
         model="glm-4.5",
         messages=[{"role": "user", "content": prompt}],
-        temperature=0,
+        temperature=temperature,
+        max_tokens=max_tokens,
     )
     return response.choices[0].message.content or ""
+
+
+def _clip_text(value: Any, max_length: int) -> str:
+    """截断上下文中的长文本，降低输入 token 数。"""
+    text = str(value or "").strip()
+    if len(text) <= max_length:
+        return text
+    return text[:max_length] + "…"
+
+
+def _compact_resume_for_interview(resume_data: Any) -> dict[str, Any]:
+    """只保留出题/评分需要的简历字段，避免每轮发送完整简历 JSON。"""
+    if not isinstance(resume_data, dict):
+        return {}
+
+    projects = []
+    for item in resume_data.get("projects", [])[:2]:
+        if not isinstance(item, dict):
+            continue
+        projects.append({
+            "name": _clip_text(item.get("name"), 80),
+            "description": _clip_text(item.get("description"), 500),
+            "technologies": item.get("technologies", [])[:12],
+            "responsibilities": item.get("responsibilities", [])[:5],
+            "highlights": item.get("highlights", [])[:5],
+        })
+
+    internships = []
+    for item in resume_data.get("internships", [])[:1]:
+        if not isinstance(item, dict):
+            continue
+        internships.append({
+            "company": _clip_text(item.get("company"), 80),
+            "position": _clip_text(item.get("position"), 80),
+            "responsibilities": item.get("responsibilities", [])[:5],
+            "technologies": item.get("technologies", [])[:12],
+        })
+
+    return {
+        "skills": resume_data.get("skills", [])[:20],
+        "projects": projects,
+        "internships": internships,
+    }
+
+
+
 
 def generate_conversation_title(
     question,
@@ -416,93 +470,64 @@ def generate_interview_question(
     return question
 
 
-def evaluate_interview_answer(
+def generate_interview_question(
     resume_data,
-    question,
-    answer
+    weak_points=None,
+    question_type="项目深挖",
+    previous_questions=None
 ):
+    """根据精简后的简历信息生成一题面试题。"""
+    weak_points = weak_points or []
+    previous_questions = previous_questions or []
+
+    question_type_instruction = {
+        "项目深挖": "围绕项目中的具体实现、技术选型或问题解决提问，不问纯定义。",
+        "技术原理": "围绕简历出现的技术原理提问，重点问为什么与实现机制。",
+        "项目结合技术原理": "问题必须同时包含真实项目场景与相关技术原理。",
+        "实际场景": "给出与简历技术栈相关的真实开发场景，让候选人分析方案。",
+        "薄弱知识点强化": "优先针对历史薄弱知识点；若为空则选择核心技术原理。",
+    }
+
+    compact_resume = _compact_resume_for_interview(resume_data)
+    compact_weak_points = [
+        _clip_text(item, 80)
+        for item in weak_points[:5]
+        if _clip_text(item, 80)
+    ]
+    compact_previous_questions = [
+        _clip_text(item, 240)
+        for item in previous_questions[-5:]
+        if _clip_text(item, 240)
+    ]
+
     prompt = f"""
-你是一名专业的技术面试官。
+你是技术面试官。只基于下面的候选人信息生成一道中文面试题。
 
-请根据候选人的简历、面试问题和候选人的回答，对回答进行评价。
+候选人信息：
+{json.dumps(compact_resume, ensure_ascii=False, separators=(",", ":"))}
 
-候选人简历：
+历史薄弱点：{json.dumps(compact_weak_points, ensure_ascii=False)}
+已问问题：{json.dumps(compact_previous_questions, ensure_ascii=False)}
+题型：{question_type}
+题型要求：{question_type_instruction.get(question_type, question_type_instruction["项目深挖"])}
 
-{json.dumps(
-    resume_data,
-    ensure_ascii=False,
-    indent=2
-)}
+要求：
+1. 只能依据候选人信息，不得编造经历或技术。
+2. 不重复已问问题。
+3. 只输出一道问题，不输出答案、解释、Markdown 或“问题：”前缀。
+""".strip()
 
-面试问题：
+    question = _ask_llm(
+        prompt,
+        temperature=0.4,
+        max_tokens=180,
+    ).strip()
 
-{question}
+    if not question:
+        raise RuntimeError("LLM 未返回有效面试问题")
 
-候选人回答：
+    return question
 
-{answer}
-
-请严格返回 JSON：
-
-{{
-    "score": 0,
-    "feedback": "",
-    "next_question": "",
-    "finished": false
-}}
-
-评分规则：
-
-90-100：
-回答准确、完整，能够结合项目实际实现说明。
-
-80-89：
-回答基本正确，有一定项目实践，但细节不足。
-
-70-79：
-核心思路基本正确，但存在明显遗漏。
-
-60-69：
-只掌握部分基础知识，项目实践不足。
-
-0-59：
-回答错误、含糊或者明显不了解相关技术。
-
-feedback：
-说明回答做得好的地方以及具体不足。
-
-next_question：
-根据候选人的回答继续追问。
-
-重点：
-1. 追问必须结合候选人的简历
-2. 如果回答暴露出知识薄弱点，可以针对该知识点继续追问
-3. 不要突然跳到与简历无关的话题
-4. 如果已经足够完成一轮面试，可以将 finished 设置为 true
-5. 只返回 JSON
-6. 不要返回 Markdown
-7. 不要返回 ```json
-"""
-
-    response = client.chat.completions.create(
-        model="glm-4.5",
-        messages=[
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        temperature=0.5
-    )
-
-    content = response.choices[0].message.content.strip()
-
-    if content.startswith("```"):
-        content = content.replace("```json", "")
-        content = content.replace("```", "")
-        content = content.strip()
-
-    return json.loads(content)
 
 
 def evaluate_interview_answer_with_knowledge(
@@ -511,145 +536,70 @@ def evaluate_interview_answer_with_knowledge(
     question,
     answer
 ):
-    knowledge_context = "\n\n".join(
-        [
-            source["content"]
-            for source in knowledge_sources
-        ]
-    )
+    """评价回答并生成下一题；输入上下文和输出均受限，减少模型等待时间。"""
+    compact_resume = _compact_resume_for_interview(resume_data)
+
+    # 仅传递最相关的 3 个检索片段，每段最多 1200 个字符。
+    compact_sources = [
+        {
+            "filename": _clip_text(source.get("filename"), 120),
+            "content": _clip_text(source.get("content"), 1200),
+        }
+        for source in (knowledge_sources or [])[:3]
+        if isinstance(source, dict) and source.get("content")
+    ]
 
     prompt = f"""
-你是一名专业的技术面试官。
+你是技术面试官。请评价候选人的回答，并只返回 JSON。
 
-请根据以下四部分信息评价候选人的回答：
+候选人简历摘要：
+{json.dumps(compact_resume, ensure_ascii=False, separators=(",", ":"))}
 
-【候选人简历】
-{json.dumps(
-    resume_data,
-    ensure_ascii=False,
-    indent=2
-)}
+相关知识库片段：
+{json.dumps(compact_sources, ensure_ascii=False, separators=(",", ":"))}
 
-【候选人的知识库内容】
-{knowledge_context}
+面试问题：{_clip_text(question, 500)}
+候选人回答：{_clip_text(answer, 4000)}
 
-【面试问题】
-{question}
-
-【候选人回答】
-{answer}
-
-请返回严格 JSON：
-
+JSON 格式：
 {{
-    "score": 0,
-    "feedback": "",
-    "reference_answer": "",
-    "knowledge_gap": [],
-    "next_question": "",
-    "finished": false
+  "score": 0,
+  "feedback": "",
+  "reference_answer": "",
+  "knowledge_gap": [],
+  "next_question": "",
+  "finished": false
 }}
 
-评价要求：
-
-1. score 为 0-100 的整数。
-
-2. feedback：
-控制在100字以内。
-只指出关键优点和一个主要不足。
-
-3. reference_answer：
-控制在200字以内。
-只提供核心回答思路。
-不要展开长篇解释。
-
-4. knowledge_gap：
-   根据候选人的回答，列出候选人没有掌握或者回答不充分的知识点。
-
-5. 必须区分：
-   - 简历中写过但回答不清楚
-   - 知识库中有相关内容但候选人没有掌握
-   - 简历和知识库都没有足够信息
-
-6. 不要因为简历写了某项技术，就默认候选人真的掌握。
-
-7. 不要编造简历和知识库中不存在的候选人经历。
-
-8. next_question 必须根据候选人的简历、当前问题和回答情况继续追问。
-   优先围绕候选人的项目经历、技术栈和实际工作内容进行提问。
-
-9. finished 表示模型认为当前面试是否适合结束。
-   但是最终是否结束由后端控制。
-
-10. 只返回 JSON。
-
-11. 不要返回 Markdown。
-
-12. 不要返回 ```json 或 ``` 包裹。
-"""
-
-    response = client.chat.completions.create(
-        model="glm-4.5",
-        messages=[
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        temperature=0.5,
-    )
-
-    content = response.choices[0].message.content.strip()
-
-
-    # 去掉markdown包裹
-    if "```json" in content:
-        content = content.replace(
-            "```json",
-            ""
-        )
-
-    if "```" in content:
-        content = content.replace(
-            "```",
-            ""
-        )
-
-    content = content.strip()
+规则：
+1. score 是 0 到 100 的整数。
+2. feedback 不超过 100 字，只写优点和一个主要不足。
+3. reference_answer 不超过 200 字，只写核心答题思路。
+4. knowledge_gap 最多 3 项；不得把简历未出现的技术当成候选人经历。
+5. next_question 只给一道与当前简历和回答相关的追问，最多 80 字。
+6. 只返回 JSON，不要 Markdown 或解释。
+""".strip()
 
     try:
-
-        return json.loads(content)
-
-    except json.JSONDecodeError:
-
-        print("JSON解析失败")
-        print(content)
-
-
-        # 尝试截取第一个JSON对象
-
-        start = content.find("{")
-        end = content.rfind("}")
-
-        if start != -1 and end != -1:
-
-            json_text = content[start:end + 1]
-
-            try:
-                return json.loads(json_text)
-
-            except Exception:
-                pass
-
-        # 最后兜底
+        # 一次调用失败时返回现有兜底结果，不在用户等待时额外重试。
+        return request_validated_json(
+            request_fn=lambda current_prompt: _ask_llm(
+                current_prompt,
+                temperature=0.2,
+                max_tokens=520,
+            ),
+            prompt=prompt,
+            schema=InterviewEvaluationResult,
+            max_attempts=1,
+        )
+    except (ValueError, json.JSONDecodeError):
         return {
             "score": 0,
-            "feedback": "AI评价生成失败，请重新回答",
+            "feedback": "AI 评价生成失败，请重新回答",
             "reference_answer": "",
             "knowledge_gap": [],
             "next_question": "",
-            "finished": False
+            "finished": False,
         }
 
 def generate_interview_report(
