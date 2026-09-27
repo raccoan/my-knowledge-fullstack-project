@@ -5,6 +5,7 @@ import {
   nextTick,
   ref,
   onMounted,
+  onBeforeUnmount,
 
 } from 'vue'
 
@@ -24,7 +25,6 @@ import {
   UserOutlined,
   FileTextOutlined,
   ProfileOutlined,
-  AimOutlined,
 } from '@ant-design/icons-vue'
 
 import {
@@ -152,6 +152,12 @@ const showBackToBottom =
   ref(false)
 
 /**
+ * 【交互优化】流式回答会高频触发内容更新；统一到下一帧滚动，
+ * 避免每个字符都执行一次平滑滚动造成页面抖动。
+ */
+let scrollFrameId: number | null = null
+
+/**
  * =========================
  * 计算属性
  * =========================
@@ -199,6 +205,24 @@ const scrollToBottom = async (
   })
 
   showBackToBottom.value = false
+}
+
+/**
+ * 【交互优化】一帧内只安排一次滚动。
+ */
+const scheduleScrollToBottom = (
+  smooth = false,
+) => {
+  if (scrollFrameId !== null) {
+    return
+  }
+
+  scrollFrameId = window.requestAnimationFrame(
+    () => {
+      scrollFrameId = null
+      void scrollToBottom(smooth)
+    },
+  )
 }
 
 /**
@@ -399,7 +423,7 @@ await streamChat(
     target.sources =
       sources
 
-    scrollToBottom()
+    scheduleScrollToBottom()
   },
 
   /**
@@ -422,7 +446,7 @@ await streamChat(
     target.content +=
       content
 
-    scrollToBottom()
+    scheduleScrollToBottom()
   },
 
   /**
@@ -876,6 +900,19 @@ const handleLogout = () => {
 
 onMounted(()=>{
   loadConversations()
+})
+
+/**
+ * 【交互优化】离开聊天页时终止未完成的流式请求并释放动画帧，
+ * 防止页面切换后仍更新旧页面状态。
+ */
+onBeforeUnmount(() => {
+  abortController.value?.abort()
+
+  if (scrollFrameId !== null) {
+    window.cancelAnimationFrame(scrollFrameId)
+    scrollFrameId = null
+  }
 })
 </script>
 

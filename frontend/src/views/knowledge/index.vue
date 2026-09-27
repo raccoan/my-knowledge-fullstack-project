@@ -33,6 +33,9 @@ const currentDetail = ref<FileDetail | null>(null)
 // 【新增】统一保存轮询定时器，离开知识库页面时必须释放。
 let processingTimer: ReturnType<typeof window.setInterval> | null = null
 
+// 【交互优化】网络较慢时，避免新一轮轮询与上一轮请求重叠。
+let processingPollInFlight = false
+
 const formatFileSize = (size: number | null) => {
   if (size === null || size === undefined) return '-'
   if (size < 1024) return `${size} B`
@@ -64,11 +67,17 @@ const startProcessingPoll = () => {
   processingTimer = window.setInterval(async () => {
     const processingItems = files.value.filter((item) => item.status === 'processing')
     if (!processingItems.length) return stopProcessingPoll()
+
+    if (processingPollInFlight) return
+
     try {
+      processingPollInFlight = true
       await Promise.all(processingItems.map((item) => getProcessingStatus(item.id)))
       await loadFiles()
     } catch {
       // 下一轮继续尝试；不因一次网络波动停止轮询。
+    } finally {
+      processingPollInFlight = false
     }
   }, 2000)
 }
