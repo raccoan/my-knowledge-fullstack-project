@@ -25,6 +25,8 @@ import {
   UserOutlined,
   FileTextOutlined,
   ProfileOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
 } from '@ant-design/icons-vue'
 
 import {
@@ -119,6 +121,29 @@ const router = useRouter()
 const messages = ref<MessageItem[]>([])
 
 const conversations = ref<Conversation[]>([])
+
+/** 【会话导航新增】控制左侧会话栏的展开状态；收起后仍可从页头重新打开。 */
+const sidebarCollapsed = ref(false)
+
+const toggleSidebar = () => {
+  sidebarCollapsed.value = !sidebarCollapsed.value
+}
+
+/**
+ * 【详情定位新增】右侧短横条高亮当前阅读到的消息。
+ * 这里保存的是消息 id，而不是数组下标，避免流式新增消息时定位错位。
+ */
+const activeOutlineMessageId = ref<number | null>(null)
+
+/** 【详情定位调整】右侧导航只保留用户的问题，不把 AI 回答作为定位项。 */
+const userQuestionOutlineItems = computed(() => {
+  return messages.value.filter((item) => item.role === 'user')
+})
+
+const getMessageOutlineText = (item: MessageItem) => {
+  const content = item.content.replace(/\s+/g, ' ').trim()
+  return `我的问题：${content || '正在输入内容…'}`
+}
 
 const editingConversationId = ref<number | null>(null)
 
@@ -274,6 +299,45 @@ const handleScroll = () => {
   // 【核心修复】用户离开底部即暂停自动滚动；回到底部后自动恢复。
   shouldFollowStream.value = isNearBottom
   showBackToBottom.value = !isNearBottom
+
+  /** 【详情定位新增】根据可视区域更新右侧短横条的当前项。 */
+  const containerTop = container.getBoundingClientRect().top
+  const referenceTop = containerTop + 92
+  let closestId: number | null = null
+  let closestDistance = Number.POSITIVE_INFINITY
+
+  // 【详情定位调整】只用用户问题参与高亮计算，避免 AI 回答导致右侧无对应高亮项。
+  userQuestionOutlineItems.value.forEach((item) => {
+    const messageElement = document.getElementById(`message-anchor-${item.id}`)
+    if (!messageElement) return
+
+    const distanceToReadingLine = Math.abs(
+      messageElement.getBoundingClientRect().top - referenceTop,
+    )
+    if (distanceToReadingLine < closestDistance) {
+      closestDistance = distanceToReadingLine
+      closestId = item.id
+    }
+  })
+
+  activeOutlineMessageId.value = closestId
+}
+
+/** 【详情定位新增】点击右侧短横条后，在当前消息滚动容器内平滑定位。 */
+const scrollToMessage = async (messageId: number) => {
+  await nextTick()
+
+  const container = chatContainer.value
+  const messageElement = document.getElementById(`message-anchor-${messageId}`)
+  if (!container || !messageElement) return
+
+  shouldFollowStream.value = false
+  const offset = messageElement.getBoundingClientRect().top - container.getBoundingClientRect().top
+  container.scrollTo({
+    top: Math.max(0, container.scrollTop + offset - 24),
+    behavior: 'smooth',
+  })
+  activeOutlineMessageId.value = messageId
 }
 
 /**
@@ -820,6 +884,8 @@ const removeConversation = async(
             null
 
         messages.value=[]
+        // 【详情定位新增】当前会话删除后清除已不存在消息的导航高亮。
+        activeOutlineMessageId.value = null
     }
 
 
@@ -878,6 +944,9 @@ const createNewConversation = async () => {
       showBackToBottom.value =
         false
 
+      // 【详情定位新增】新会话没有内容时清除右侧定位条的旧高亮。
+      activeOutlineMessageId.value = null
+
       message.success(
         '已创建新对话',
       )
@@ -917,6 +986,8 @@ const switchConversation = async (conversationId:number) => {
       }),
     )
     await scrollToBottom(false,)
+    // 【详情定位新增】切换会话后立即确定第一屏阅读位置的高亮短横。
+    handleScroll()
 
   }catch(error){
      console.error(
@@ -982,15 +1053,32 @@ onBeforeUnmount(() => {
          ========================= -->
     <a-layout-sider
       :width="240"
+      :collapsed="sidebarCollapsed"
+      :collapsed-width="0"
+      :trigger="null"
       class="chat-sider"
     >
       <div class="sider-content">
         <div class="brand">
-          <RobotOutlined />
+          <div class="brand-name">
+            <RobotOutlined />
 
-          <span>
-            AI 知识助手
-          </span>
+            <span>
+              AI 知识助手
+            </span>
+          </div>
+
+          <!-- 【会话导航新增】显式收起入口，避免依赖默认的侧栏触发器。 -->
+          <a-button
+            type="text"
+            class="sidebar-toggle"
+            aria-label="收起会话列表"
+            @click="toggleSidebar"
+          >
+            <template #icon>
+              <MenuFoldOutlined />
+            </template>
+          </a-button>
         </div>
 
         <a-button
@@ -1037,7 +1125,6 @@ onBeforeUnmount(() => {
                 <span>
                   {{ item.title }}
                 </span>
-
 
                 <span class="conversation-actions">
 
@@ -1162,13 +1249,28 @@ onBeforeUnmount(() => {
       <a-layout-header
         class="chat-header"
       >
-        <div>
+        <div class="header-left-group">
+          <!-- 【会话导航新增】侧栏收起后，标题左侧提供重新打开的入口。 -->
+          <a-button
+            v-if="sidebarCollapsed"
+            type="text"
+            class="sidebar-reopen-button"
+            aria-label="打开会话列表"
+            @click="toggleSidebar"
+          >
+            <template #icon>
+              <MenuUnfoldOutlined />
+            </template>
+          </a-button>
+
+          <div>
           <div class="header-title">
             知识库问答
           </div>
 
           <div class="header-subtitle">
             基于你的个人知识库进行 AI 问答
+          </div>
           </div>
         </div>
 
@@ -1270,6 +1372,7 @@ onBeforeUnmount(() => {
                 'assistant-row':
                   item.role === 'assistant',
               }"
+              :id="`message-anchor-${item.id}`"
             >
 
               <!-- AI 头像 -->
@@ -1582,6 +1685,35 @@ onBeforeUnmount(() => {
           </div>
         </div>
       </a-layout-footer>
+
+      <!--
+        【详情定位调整】侧栏收起时，右侧短横条仅对应当前会话的用户问题。
+        悬停显示问题全文；点击调用 scrollToMessage 平滑定位，不展示 AI 回答导航。
+      -->
+      <nav
+        v-if="sidebarCollapsed && userQuestionOutlineItems.length"
+        class="message-outline-rail"
+        aria-label="当前会话内容定位"
+      >
+        <a-tooltip
+          v-for="item in userQuestionOutlineItems"
+          :key="item.id"
+          :title="getMessageOutlineText(item)"
+          placement="left"
+        >
+          <button
+            type="button"
+            class="message-outline-anchor"
+            :class="{
+              'message-outline-anchor-active': activeOutlineMessageId === item.id,
+            }"
+            :aria-label="`定位到${getMessageOutlineText(item)}`"
+            @click="scrollToMessage(item.id)"
+          >
+            <span aria-hidden="true" />
+          </button>
+        </a-tooltip>
+      </nav>
     </a-layout>
   </a-layout>
 </template>
@@ -1611,7 +1743,8 @@ onBeforeUnmount(() => {
   flex-direction: column;
   height: 100%;
   padding: 20px 14px;
-  overflow-y: auto;
+  /* 【会话列表范围修复】侧栏本身不滚动，避免滚动条影响品牌、功能中心等其他板块。 */
+  overflow: hidden;
 }
 
 /* 品牌 */
@@ -1661,7 +1794,41 @@ onBeforeUnmount(() => {
 
 .conversation-list {
   margin-bottom: 0;
+  /* 【会话列表范围修复】仅历史会话区域可纵向滚动，其余侧栏内容固定。 */
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(132 132 145 / 25%) transparent;
+}
+
+/* 【会话列表修复】即使组件内部生成滚动层，也强制隐藏 X 方向滚动条。 */
+.conversation-list :deep(.ant-list-items) {
+  overflow-x: hidden !important;
+}
+
+.conversation-list::-webkit-scrollbar {
+  width: 4px;
+  height: 0;
+}
+
+.conversation-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.conversation-list::-webkit-scrollbar-thumb {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: rgb(132 132 145 / 22%);
+  background-clip: padding-box;
+}
+
+.conversation-list::-webkit-scrollbar-thumb:hover {
+  background: rgb(112 112 126 / 38%);
+  background-clip: padding-box;
 }
 
 .conversation-item {
@@ -2904,6 +3071,160 @@ onBeforeUnmount(() => {
 
   .input-wrapper {
     border-radius: 18px;
+  }
+}
+
+/* =========================================================
+   【会话导航新增】DeepSeek 式低干扰会话导航：淡短横、细滚动条与折叠定位栏。
+========================================================= */
+
+.chat-sider {
+  overflow: hidden;
+  transition: width 0.22s ease, min-width 0.22s ease, max-width 0.22s ease;
+}
+
+.brand {
+  justify-content: space-between;
+}
+
+.brand-name,
+.header-left-group {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+}
+
+.brand-name {
+  gap: 9px;
+}
+
+.sidebar-toggle,
+.sidebar-reopen-button {
+  display: grid;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  padding: 0 !important;
+  place-items: center;
+  border-radius: 7px;
+  color: #7b7b82;
+}
+
+.sidebar-toggle:hover,
+.sidebar-reopen-button:hover {
+  color: #3e3e46 !important;
+  background: #eeeeee !important;
+}
+
+.header-left-group {
+  gap: 9px;
+}
+
+/* 【会话列表范围修复】纵向果冻条只属于历史对话列表，右侧详情导航不受影响。 */
+.conversation-list,
+.message-outline-rail {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(132 132 145 / 25%) transparent;
+}
+
+.conversation-list::-webkit-scrollbar,
+.message-outline-rail::-webkit-scrollbar {
+  width: 4px;
+  height: 0;
+}
+
+.conversation-list::-webkit-scrollbar-track,
+.message-outline-rail::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.conversation-list::-webkit-scrollbar-thumb,
+.message-outline-rail::-webkit-scrollbar-thumb {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: rgb(132 132 145 / 22%);
+  background-clip: padding-box;
+}
+
+.conversation-list::-webkit-scrollbar-thumb:hover,
+.message-outline-rail::-webkit-scrollbar-thumb:hover {
+  background: rgb(112 112 126 / 38%);
+  background-clip: padding-box;
+}
+
+/* 【会话列表范围修复】底部阴影也限制在历史对话区域，不覆盖功能中心。 */
+.conversation-list::after {
+  position: sticky;
+  z-index: 2;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: block;
+  height: 18px;
+  margin-top: -18px;
+  content: '';
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgb(255 255 255 / 0%), rgb(255 255 255 / 94%));
+  filter: blur(1px);
+}
+
+/* 侧栏折叠后的右侧内容定位栏：hover 时由 Tooltip 展示问题或回答摘要。 */
+.chat-page > .ant-layout {
+  position: relative;
+  min-width: 0;
+}
+
+.message-outline-rail {
+  position: absolute;
+  z-index: 8;
+  top: 50%;
+  right: 12px;
+  display: flex;
+  max-height: calc(100vh - 144px);
+  padding: 6px 1px;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  transform: translateY(-50%);
+}
+
+.message-outline-anchor {
+  display: grid;
+  width: 22px;
+  height: 16px;
+  padding: 0;
+  cursor: pointer;
+  place-items: center;
+  border: 0;
+  background: transparent;
+}
+
+.message-outline-anchor span {
+  display: block;
+  width: 12px;
+  height: 2px;
+  border-radius: 1px;
+  background: rgb(123 123 133 / 32%);
+  box-shadow: 0 1px 5px rgb(73 73 82 / 12%);
+  transition: width 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+}
+
+.message-outline-anchor:hover span {
+  width: 16px;
+  background: rgb(74 74 84 / 62%);
+  box-shadow: 0 2px 8px rgb(73 73 82 / 18%);
+}
+
+.message-outline-anchor-active span,
+.message-outline-anchor-active:hover span {
+  width: 16px;
+  background: #5b6cf2;
+  box-shadow: 0 1px 6px rgb(91 108 242 / 30%);
+}
+
+@media (max-width: 768px) {
+  .message-outline-rail {
+    right: 6px;
   }
 }
 </style>
