@@ -105,6 +105,8 @@ interface MessageItem {
   role: 'user' | 'assistant'
   content: string
   sources?: ChatSource[]
+  /** 【新增】本轮被用户停止时，用于显示可重新生成的状态。 */
+  interrupted?: boolean
 }
 
 /**
@@ -159,11 +161,15 @@ const chatContainer =
 const showBackToBottom =
   ref(false)
 
+/** 【新增】仅用户停留在底部时才自动跟随流式内容。 */
+const shouldFollowStream = ref(true)
+
 /**
  * 【交互优化】流式回答会高频触发内容更新；统一到下一帧滚动，
  * 避免每个字符都执行一次平滑滚动造成页面抖动。
  */
 let scrollFrameId: number | null = null
+let scrollTaskPending = false
 
 /**
  * =========================
@@ -205,11 +211,12 @@ const scrollToBottom = async (
     return
   }
 
+  // 【新增】用户主动点击“回到底部”后才恢复自动跟随。
+  shouldFollowStream.value = true
+
   container.scrollTo({
     top: container.scrollHeight,
-    behavior: smooth
-      ? 'smooth'
-      : 'auto',
+    behavior: smooth ? 'smooth' : 'auto',
   })
 
   showBackToBottom.value = false
@@ -219,16 +226,27 @@ const scrollToBottom = async (
  * 【交互优化】一帧内只安排一次滚动。
  */
 const scheduleScrollToBottom = (
-  smooth = false,
 ) => {
-  if (scrollFrameId !== null) {
+  // 【核心修复】用户正在上滑阅读时，绝不抢夺滚动位置。
+  if (!shouldFollowStream.value || scrollTaskPending) {
     return
   }
 
+  scrollTaskPending = true
   scrollFrameId = window.requestAnimationFrame(
-    () => {
+    async () => {
       scrollFrameId = null
-      void scrollToBottom(smooth)
+
+      await nextTick()
+
+      const container = chatContainer.value
+      if (container && shouldFollowStream.value) {
+        // 流式过程中使用 auto，避免浏览器反复叠加 smooth 动画造成抖动。
+        container.scrollTop = container.scrollHeight
+        showBackToBottom.value = false
+      }
+
+      scrollTaskPending = false
     },
   )
 }
@@ -251,8 +269,11 @@ const handleScroll = () => {
     container.scrollTop -
     container.clientHeight
 
-  showBackToBottom.value =
-    distance > 150
+  const isNearBottom = distance <= 96
+
+  // 【核心修复】用户离开底部即暂停自动滚动；回到底部后自动恢复。
+  shouldFollowStream.value = isNearBottom
+  showBackToBottom.value = !isNearBottom
 }
 
 /**
@@ -351,7 +372,7 @@ const sendMessage = async (
 
   inputValue.value = ''
 
-  await scrollToBottom()
+  await scrollToBottom(false)
 
   /**
    * =========================
@@ -492,7 +513,10 @@ await streamChat(
     abortController.value =
       null
 
-    scrollToBottom()
+    // 仅仍停留在底部时才滚动，避免回答结束时把用户拉离阅读位置。
+    if (shouldFollowStream.value) {
+      void scrollToBottom(false)
+    }
   },
 
   controller.signal,
@@ -507,6 +531,16 @@ await streamChat(
       error instanceof DOMException &&
       error.name === 'AbortError'
     ) {
+      // 【新增】立即给本地页面明确反馈；后端 finally 也会保存该提示。
+      const target = messages.value.find(
+        item => item.id === assistantId,
+      )
+      if (target) {
+        target.interrupted = true
+        if (!target.content) {
+          target.content = '本次回答已停止，可点击“重新生成”再次尝试。'
+        }
+      }
       return
     }
 
@@ -553,7 +587,20 @@ const stopGeneration = () => {
     return
   }
 
+  const interruptedId = currentAssistantId.value
+
   abortController.value.abort()
+
+  // 【新增】不让用户只看到一条空回答，明确说明可再次生成。
+  const target = messages.value.find(
+    item => item.id === interruptedId,
+  )
+  if (target) {
+    target.interrupted = true
+    if (!target.content) {
+      target.content = '本次回答已停止，可点击“重新生成”再次尝试。'
+    }
+  }
 
   abortController.value = null
 
@@ -1305,6 +1352,21 @@ onBeforeUnmount(() => {
                     AI 正在生成回答
                   </div>
 
+                  <!-- 【新增】中断后保留当前内容，并给出明确的恢复操作。 -->
+                  <div
+                    v-if="item.interrupted"
+                    class="interrupted-hint"
+                  >
+                    <span>回答已停止</span>
+                    <a-button
+                      type="link"
+                      size="small"
+                      @click="regenerate(index)"
+                    >
+                      重新生成
+                    </a-button>
+                  </div>
+
                   <!-- AI 操作 -->
                   <a-space
                     v-if="
@@ -1937,6 +1999,22 @@ onBeforeUnmount(() => {
   line-height: 18px;
 
   animation: status-fade-in 0.2s ease both;
+}
+
+.interrupted-hint {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  margin-top: 10px;
+  color: #8a8a8a;
+  font-size: 12px;
+}
+
+.interrupted-hint :deep(.ant-btn-link) {
+  height: auto;
+  padding: 0 2px;
+  color: #5b5ce2;
 }
 
 .stream-dots {
