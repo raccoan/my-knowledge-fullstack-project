@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { parseApiError } from './errors'
 
 const request = axios.create({
   baseURL: 'http://127.0.0.1:8000',
@@ -21,10 +22,14 @@ request.interceptors.response.use(
   },
 
   (error) => {
-    console.log('Axios 请求失败:', error)
-    console.log('请求地址:', error.config?.url)
-    console.log('状态码:', error.response?.status)
-    console.log('后端返回:', error.response?.data)
+    // 仅转换准入类错误，保持其余接口原有的 AxiosError 契约；不输出带 Token 的请求对象。
+    if (error.response?.status === 429 || error.response?.status === 503) {
+      return Promise.reject(parseApiError(
+        error.response.status,
+        error.response.data,
+        error.response.headers?.['retry-after'],
+      ))
+    }
 
     if (
       error.response?.status === 401 &&

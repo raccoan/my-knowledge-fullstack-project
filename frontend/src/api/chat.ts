@@ -1,4 +1,5 @@
 import request from './request'
+import { parseApiError } from './errors'
 
 export interface ChatParams {
   question: string
@@ -44,6 +45,7 @@ export async function streamChat(
   onDone: () => void,
 
   signal?: AbortSignal,
+  onAccepted?: () => void,
 ) {
   const token =
     localStorage.getItem('token')
@@ -75,9 +77,8 @@ export async function streamChat(
     )
 
   if (!response.ok) {
-    throw new Error(
-      `请求失败：${response.status}`,
-    )
+    const body: unknown = await response.json().catch(() => undefined)
+    throw parseApiError(response.status, body, response.headers.get('Retry-After'))
   }
 
   if (!response.body) {
@@ -85,6 +86,8 @@ export async function streamChat(
       '浏览器不支持流式响应',
     )
   }
+
+  onAccepted?.()
 
   const reader =
     response.body.getReader()

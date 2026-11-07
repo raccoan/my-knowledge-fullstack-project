@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
   computed,
+  reactive,
   onMounted,
   ref
 } from 'vue'
@@ -31,6 +32,8 @@ import {
   getInterviewReport,
 
 } from '@/api/interviews'
+import { useRequestCooldown } from '@/composables/useRequestCooldown'
+import RequestCooldown from '@/components/RequestCooldown.vue'
 
 import type {
   InterviewMessage,
@@ -64,6 +67,8 @@ const messages = ref<InterviewMessage[]>([])
  * 是否提交中
  */
 const submitting = ref(false)
+const cooldown = reactive(useRequestCooldown())
+const startError = ref(false)
 
 /**
  * 是否结束
@@ -251,6 +256,8 @@ const loadInterviewReport = async () => {
  * 开始新的面试
  */
 const startInterview = async () => {
+  if (submitting.value || cooldown.blocked) return
+  startError.value = false
   const resumeId = Number(
     route.query.resumeId
   )
@@ -306,6 +313,9 @@ const startInterview = async () => {
       error
     )
 
+    startError.value = true
+    if (cooldown.handleError(error)) return
+
     antMessage.error(
       '创建面试失败'
     )
@@ -318,6 +328,7 @@ const startInterview = async () => {
  * 提交回答
  */
 const submitAnswer = async () => {
+  if (submitting.value || cooldown.blocked) return
 
   if (!interviewId.value) {
     antMessage.error(
@@ -379,6 +390,7 @@ const submitAnswer = async () => {
 
 
   } catch(error){
+    if (cooldown.handleError(error)) return
 
     console.error(
       '提交回答失败:',
@@ -437,6 +449,10 @@ onMounted(async () => {
 
 <template>
   <div class="interview-page">
+    <RequestCooldown :seconds="cooldown.remainingSeconds" :reason="cooldown.reason" />
+    <a-button v-if="startError" :disabled="submitting || cooldown.blocked" @click="startInterview">
+      {{ cooldown.blocked ? `${cooldown.remainingSeconds} 秒后可重试` : '重试创建面试' }}
+    </a-button>
     <!-- 顶部 -->
     <div class="page-header">
       <div class="header-left">
@@ -848,10 +864,10 @@ onMounted(async () => {
                 <a-button
                   type="primary"
                   :loading="submitting"
-                  :disabled="!answer.trim()"
+                  :disabled="!answer.trim() || submitting || cooldown.blocked || !question"
                   @click="submitAnswer"
                 >
-                  提交回答
+                  {{ cooldown.blocked ? `${cooldown.remainingSeconds} 秒后可提交` : '提交回答' }}
 
                   <template #icon>
                     <SendOutlined />

@@ -5,6 +5,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from database import get_db
+from dependencies.rate_limit import limit_interview
 from models.interview import Interview
 from models.interview_message import InterviewMessage
 from models.resume import Resume
@@ -30,7 +31,7 @@ router = APIRouter()
 MAX_QUESTIONS = 5
 
 
-@router.post("/interviews")
+@router.post("/interviews", dependencies=[Depends(limit_interview)])
 def create_interview(
     request: CreateInterviewRequest,
     db: Session = Depends(get_db),
@@ -158,7 +159,7 @@ def create_interview(
     }
 
 
-@router.post("/interviews/{interview_id}/answer")
+@router.post("/interviews/{interview_id}/answer", dependencies=[Depends(limit_interview)])
 def answer_interview(
     interview_id: int,
     request: AnswerInterviewRequest,

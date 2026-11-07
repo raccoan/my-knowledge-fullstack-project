@@ -2,6 +2,7 @@
 <script setup lang="ts">
 import {
   computed,
+  reactive,
   nextTick,
   ref,
   onMounted,
@@ -21,6 +22,7 @@ import {
   CopyOutlined,
   ReloadOutlined,
   ArrowDownOutlined,
+  ArrowUpOutlined,
   RobotOutlined,
   UserOutlined,
   FileTextOutlined,
@@ -32,6 +34,9 @@ import {
 import {
   streamChat,
 } from '@/api/chat'
+import { isAdmissionError } from '@/api/errors'
+import { useRequestCooldown } from '@/composables/useRequestCooldown'
+import RequestCooldown from '@/components/RequestCooldown.vue'
 
 
 import {
@@ -163,6 +168,7 @@ const starterPrompts = [
 ]
 
 const loading = ref(false)
+const cooldown = reactive(useRequestCooldown())
 
 const currentAssistantId =
   ref<number | null>(null)
@@ -204,7 +210,7 @@ let scrollTaskPending = false
 const canSend = computed(() => {
   return (
     inputValue.value.trim().length > 0 &&
-    !loading.value
+    !loading.value && !cooldown.blocked
   )
 })
 
@@ -347,6 +353,7 @@ const scrollToMessage = async (messageId: number) => {
  */
 const sendMessage = async (
   question?: string,
+  options: { replaceAssistantId?: number; existingUserId?: number } = {},
 ) => {
   const text = (
     question ??
@@ -357,7 +364,7 @@ const sendMessage = async (
     return
   }
 
-  if (loading.value) {
+  if (loading.value || cooldown.blocked) {
     return
   }
 
@@ -430,11 +437,11 @@ const sendMessage = async (
     content: text,
   }
 
-  messages.value.push(
-    userMessage,
-  )
-
-  inputValue.value = ''
+  const optimisticUserId = options.existingUserId ? null : userMessage.id
+  if (optimisticUserId !== null) {
+    messages.value.push(userMessage)
+    inputValue.value = ''
+  }
 
   await scrollToBottom(false)
 
@@ -548,11 +555,12 @@ await streamChat(
    * =========================
    */
   (title) => {
+    if (controller.signal.aborted) return
     const conversation =
       conversations.value.find(
         item =>
           item.id ===
-          currentConversationId.value,
+          conversationId,
       )
 
     if (!conversation) {
@@ -569,6 +577,7 @@ await streamChat(
    * =========================
    */
   () => {
+    if (abortController.value !== controller) return
     loading.value = false
 
     currentAssistantId.value =
@@ -584,8 +593,22 @@ await streamChat(
   },
 
   controller.signal,
+  () => {
+    // 服务器准入成功后才移除旧回答，被限流的“重新生成”不会丢掉原回答。
+    if (options.replaceAssistantId !== undefined && !controller.signal.aborted) {
+      messages.value = messages.value.filter(item => item.id !== options.replaceAssistantId)
+    }
+  },
 )
   } catch (error) {
+    if (isAdmissionError(error)) {
+      messages.value = messages.value.filter(item => item.id !== assistantId && item.id !== optimisticUserId)
+      if (currentConversationId.value === conversationId) {
+        if (optimisticUserId !== null && !inputValue.value) inputValue.value = text
+        cooldown.handleError(error)
+      }
+      return
+    }
     /**
      * =========================
      * 用户主动停止
@@ -631,13 +654,12 @@ await streamChat(
       'AI 请求失败',
     )
   } finally {
-    loading.value = false
-
-    currentAssistantId.value =
-      null
-
-    abortController.value =
-      null
+    // 旧请求的 finally 不能结束用户停止后刚启动的新一轮请求。
+    if (abortController.value === controller) {
+      loading.value = false
+      currentAssistantId.value = null
+      abortController.value = null
+    }
   }
 }
 
@@ -686,7 +708,7 @@ const stopGeneration = () => {
 const regenerate = async (
   index: number,
 ) => {
-  if (loading.value) {
+  if (loading.value || cooldown.blocked) {
     return
   }
 
@@ -727,18 +749,11 @@ const regenerate = async (
   }
 
   /**
-   * 删除旧 AI 消息
-   */
-  messages.value.splice(
-    index,
-    1,
-  )
-
-  /**
    * 重新发送
    */
   await sendMessage(
     userMessage.content,
+    { replaceAssistantId: assistant.id, existingUserId: userMessage.id },
   )
 }
 
@@ -1464,6 +1479,7 @@ onBeforeUnmount(() => {
                     <a-button
                       type="link"
                       size="small"
+                      :disabled="loading || cooldown.blocked"
                       @click="regenerate(index)"
                     >
                       重新生成
@@ -1496,7 +1512,7 @@ onBeforeUnmount(() => {
                     <a-button
                       type="text"
                       size="small"
-                      :disabled="loading"
+                      :disabled="loading || cooldown.blocked"
                       @click="
                         regenerate(index)
                       "
@@ -1649,6 +1665,7 @@ onBeforeUnmount(() => {
         class="chat-footer"
       >
         <div class="input-wrapper">
+          <RequestCooldown :seconds="cooldown.remainingSeconds" :reason="cooldown.reason" />
           <a-textarea
             v-model:value="inputValue"
             :auto-size="{
@@ -1680,7 +1697,7 @@ onBeforeUnmount(() => {
                 <SendOutlined />
               </template>
 
-              发送
+              {{ cooldown.blocked ? `${cooldown.remainingSeconds} 秒后可发送` : '发送' }}
             </a-button>
           </div>
         </div>

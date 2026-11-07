@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from dependencies.rate_limit import rate_limit_lifespan
 
 from routers import users
 from routers import files
@@ -24,7 +25,7 @@ from dotenv import load_dotenv
 
 
 
-app = FastAPI()
+app = FastAPI(lifespan=rate_limit_lifespan)
 
 # CORS 跨域配置
 app.add_middleware(
@@ -36,6 +37,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Retry-After"],
 )
 
 @app.get("/")

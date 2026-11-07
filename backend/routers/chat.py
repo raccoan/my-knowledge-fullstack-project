@@ -3,6 +3,7 @@ from fastapi.params import Depends
 from sqlalchemy.orm import  Session
 
 from database import get_db
+from dependencies.rate_limit import limit_chat
 
 from models.conversation import Conversation
 from models.message import Message
@@ -36,13 +37,13 @@ def create_title_from_question(question: str, max_length: int = 22) -> str:
         return normalized[:max_length] + "…"
     return normalized
 
-@router.post('/chat')
-def chat(request:ChatRequest,current_user:User=Depends(get_current_user)):
-    result = rag_answer(request.question,current_user["id"])
+@router.post('/chat', dependencies=[Depends(limit_chat)])
+def chat(request:ChatRequest, db: Session = Depends(get_db), current_user:User=Depends(get_current_user)):
+    result = rag_answer(request.question,current_user["id"], db)
     return result
 
 
-@router.post("/chat/stream")
+@router.post("/chat/stream", dependencies=[Depends(limit_chat)])
 def chat_stream(
     request: ChatRequest,
     db: Session = Depends(get_db),

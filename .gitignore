@@ -16,6 +16,11 @@ chroma/
 
 # Frontend
 node_modules/
+.npm-cache/
+.pip-cache/
+.pytest_cache/
+playwright-report/
+test-results/
 dist/
 
 # IDE
